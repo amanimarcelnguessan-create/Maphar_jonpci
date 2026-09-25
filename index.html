@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Stand MAPHAR – JONPCI 2026</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+:root{--bg:#f3f7f5;--card:#fff;--ink:#12201b;--mute:#5d6e67;--line:#d8e2dd;--brand:#0f5c4a;--yes:#1f8a5b;--no:#c9701b;--err:#b3261e;--soft:#eef5f2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button{font-family:inherit}main{max-width:520px;margin:0 auto;padding:18px 16px 40px}
+h1{font-size:1.45rem;margin:8px 0 2px;color:var(--brand)}.sub{margin:0;color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:14px}
+label{display:block;font-weight:600;font-size:.88rem;margin:14px 0 5px}
+input{width:100%;padding:13px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink)}
+input:focus{outline:3px solid rgba(15,92,74,.25);border-color:var(--brand)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.two label:first-child{margin-top:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button,.sg button{padding:9px 13px;border:1.5px solid var(--line);border-radius:99px;background:#fff;color:var(--ink);font-size:.9rem}
+.chips button[aria-pressed=true]{background:var(--brand);border-color:var(--brand);color:#fff}
+.sg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.sg button{background:var(--soft)}
+.pre{display:flex}.pre span{display:flex;align-items:center;padding:0 12px;background:var(--soft);border:1.5px solid var(--line);border-right:0;border-radius:10px 0 0 10px;color:var(--mute);font-weight:600}
+.pre input{border-radius:0 10px 10px 0}.pre span[hidden]+input{border-radius:10px}
+.yn{padding:16px;border:2px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-weight:700;font-size:1.05rem}
+.yn[aria-pressed=true].y{background:var(--yes);border-color:var(--yes);color:#fff}.yn[aria-pressed=true].n{background:var(--no);border-color:var(--no);color:#fff}
+.go{width:100%;margin-top:18px;padding:16px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-weight:800;font-size:1.05rem}
+.sec{width:100%;margin-top:10px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-weight:600}
+.err{color:var(--err);font-size:.85rem;min-height:1.1em;margin:8px 0 0}.fine{color:var(--mute);font-size:.78rem;margin:10px 0 0}
+.center{text-align:center}.tick{width:72px;height:72px;stroke:var(--yes);fill:none;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;animation:d .6s ease forwards}
+@keyframes d{from{stroke-dashoffset:60}to{stroke-dashoffset:0}}@media(prefers-reduced-motion:reduce){.tick{animation:none}}
+[hidden]{display:none!important}
+</style></head><body><main>
+<h1>Bienvenue sur le stand MAPHAR</h1><p class="sub">Une minute pour vous enregistrer.</p>
+
+<section id="back" class="card center" hidden>
+ <p>Bonjour <b id="bn"></b></p>
+ <button class="go" id="bo" style="margin-top:6px">Confirmer ma visite d'aujourd'hui</button>
+ <button class="sec" id="bx">Ce n'est pas moi</button>
+</section>
+
+<form id="f" class="card" novalidate>
+ <div class="two"><div><label for="prenom">Prénom</label><input id="prenom" autocomplete="given-name"></div><div><label for="nom">Nom</label><input id="nom" autocomplete="family-name"></div></div>
+ <label>Secteur d'activité</label><div class="chips" id="sect"></div>
+ <label for="st" id="stl">Officine</label><div class="pre"><span id="pf">Pharmacie</span><input id="st" autocomplete="off"></div><div class="sg" id="sg-st"></div>
+ <label for="lieu">Lieu d'exercice</label><input id="lieu" autocomplete="off" placeholder="Commune ou ville"><div class="sg" id="sg-lieu"></div>
+ <label for="tel">Téléphone</label><div class="pre"><span>+225</span><input id="tel" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="07 00 00 00 00"></div>
+ <label for="mail">E-mail</label><input id="mail" type="email" autocomplete="email"><div class="sg" id="sg-mail"></div>
+ <label>Disposez-vous d'un produit MAPHAR ?</label>
+ <div class="two"><button type="button" class="yn y" data-v="1" aria-pressed="false">Oui</button><button type="button" class="yn n" data-v="0" aria-pressed="false">Non</button></div>
+ <p class="err" id="err" role="alert"></p>
+ <button class="go" id="go">Valider ma visite</button>
+ <p class="fine">En validant, vous acceptez que la MAPHAR puisse vous recontacter.</p>
+</form>
+
+<section id="ok" class="card center" hidden>
+ <svg class="tick" viewBox="0 0 52 52"><path d="M12 27l10 10 18-20"/></svg>
+ <h1 id="okt"></h1><p class="sub" id="oks"></p>
+</section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig={
+  apiKey:            "AIzaSyB9zIQ5DqwIBalhfmAr1Ewe5QRlxzgmvCg",
+  authDomain:        "maphar-presence.firebaseapp.com",
+  projectId:         "maphar-presence",
+  storageBucket:     "maphar-presence.firebasestorage.app",
+  messagingSenderId: "560314133390",
+  appId:             "1:560314133390:web:96585236a264d8f8da92df"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+const $=i=>document.getElementById(i),SRC=new URLSearchParams(location.search).get('s')==='qr'?'qr':'lien';
+const S={'Officine':['Officine','Pharmacie'],'Hôpital ou clinique':['Établissement',''],'Grossiste':['Société',''],'Industrie':['Société',''],'Étudiant':['Faculté ou école',''],'Autre':['Structure','']};
+const LIEUX=['Abobo','Adjamé','Anyama','Attécoubé','Bingerville','Cocody','Koumassi','Marcory','Plateau','Port-Bouët','Songon','Treichville','Yopougon','Grand-Bassam','Dabou','Jacqueville','Bouaké','Yamoussoukro','San-Pédro','Daloa','Korhogo','Man','Gagnoa','Abengourou','Divo','Soubré','Odienné','Bondoukou','Séguéla','Ferkessédougou','Agboville','Aboisso','Sassandra','Katiola','Dimbokro','Adzopé'];
+const DOM=['gmail.com','yahoo.fr','yahoo.com','outlook.com','hotmail.com','icloud.com'],FIX={'gmial.com':'gmail.com','gmai.com':'gmail.com','gamil.com':'gmail.com','gmail.co':'gmail.com','yaho.fr':'yahoo.fr','hotmial.com':'hotmail.com'};
+let sect='',prod=null;const L={lieu:[],st:[]};
+const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const cap=s=>s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
+const canon=l=>LIEUX.find(x=>norm(x)===norm(l))||cap(l);
+const digits=v=>{let d=v.replace(/\D/g,'');if(d.startsWith('225')&&d.length>10)d=d.slice(3);return d.slice(0,10)};
+const kk=s=>norm(s).replace(/\b(pharmacie|pharm|de|du|la|le|les|des|d|l)\b/g,'').replace(/[^a-z0-9]/g,'')||norm(s).replace(/[^a-z0-9]/g,'');
+
+db.collection('jonpci_suggestions').get().then(s=>s.forEach(d=>{const x=d.data();(x.t==='lieu'?L.lieu:L.st).push(x)})).catch(()=>{});
+function mk(b,t,fn){const e=document.createElement('button');e.type='button';e.textContent=t;e.onpointerdown=ev=>{ev.preventDefault();fn(t);b.innerHTML=''};b.append(e)}
+function sug(i,b,get){$(i).addEventListener('input',()=>{const q=norm($(i).value),bx=$(b);bx.innerHTML='';if(q)get().filter(x=>norm(x).includes(q)&&norm(x)!==q).slice(0,5).forEach(x=>mk(bx,x,v=>$(i).value=v))});$(i).addEventListener('blur',()=>$(b).innerHTML='')}
+sug('lieu','sg-lieu',()=>[...new Set([...LIEUX,...L.lieu.map(x=>x.label)])]);
+sug('st','sg-st',()=>[...new Set(L.st.filter(x=>x.s===sect).map(x=>x.label))]);
+
+Object.keys(S).forEach(k=>{const b=document.createElement('button');b.type='button';b.textContent=k;b.setAttribute('aria-pressed',false);
+ b.onclick=()=>{sect=k;$('stl').textContent=S[k][0]+(k==='Officine'?'':' (facultatif)');$('pf').textContent=S[k][1];$('pf').hidden=!S[k][1];
+  document.querySelectorAll('#sect button').forEach(x=>x.setAttribute('aria-pressed',x===b))};$('sect').append(b)});
+document.querySelectorAll('.yn').forEach(b=>b.onclick=()=>{prod=b.dataset.v==='1';document.querySelectorAll('.yn').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+$('tel').oninput=e=>e.target.value=digits(e.target.value).replace(/(\d{2})(?=\d)/g,'$1 ');
+$('prenom').onblur=()=>$('prenom').value=cap($('prenom').value.trim());
+$('nom').onblur=()=>$('nom').value=$('nom').value.trim().toUpperCase();
+$('mail').oninput=e=>{const v=e.target.value,i=v.indexOf('@'),b=$('sg-mail');b.innerHTML='';if(i<0)return;const l=v.slice(0,i),q=v.slice(i+1).toLowerCase();DOM.filter(d=>d.startsWith(q)&&d!==q).slice(0,4).forEach(d=>mk(b,l+'@'+d,x=>$('mail').value=x))};
+$('mail').onblur=()=>{const v=$('mail').value,i=v.indexOf('@'),f=FIX[v.slice(i+1).toLowerCase()];if(i>0&&f)$('mail').value=v.slice(0,i+1)+f;$('sg-mail').innerHTML=''};
+$('f').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();const i=[...$('f').querySelectorAll('input')],n=i[i.indexOf(e.target)+1];n?n.focus():$('go').click()}});
+
+function chk(){const t=digits($('tel').value),m=$('mail').value.trim();let e='';
+ if(!$('prenom').value.trim()||!$('nom').value.trim())e='Indiquez votre nom et votre prénom.';
+ else if(!sect)e='Choisissez votre secteur d\'activité.';
+ else if(sect==='Officine'&&!$('st').value.trim())e='Indiquez le nom de votre officine.';
+ else if(!$('lieu').value.trim())e='Indiquez votre lieu d\'exercice.';
+ else if(t.length!==10)e='Le numéro doit comporter 10 chiffres.';
+ else if(m&&!/^\S+@\S+\.\S+$/.test(m))e='Cette adresse e-mail semble incorrecte.';
+ else if(prod===null)e='Répondez à la question sur le produit MAPHAR.';
+ $('err').textContent=e;return !e}
+const learn=(t,label,s)=>db.collection('jonpci_suggestions').doc(t+'_'+kk(label)).set({t,label,s:s||''}).catch(()=>{});
+const rec=p=>({...p,jour:new Date().toISOString().slice(0,10),source:SRC,ts:firebase.firestore.FieldValue.serverTimestamp(),suivi:'À traiter',commercial:'',note:''});
+async function send(p){const d=rec(p),r=db.collection('jonpci_visites').doc(d.jour+'_'+d.tel).set(d);r.catch(()=>{});let dup=false;
+ try{await Promise.race([r,new Promise(x=>setTimeout(x,3500))])}catch(e){dup=e.code==='permission-denied'}
+ try{localStorage.setItem('jp26',JSON.stringify(p))}catch(e){}
+ $('f').hidden=$('back').hidden=true;$('ok').hidden=false;$('okt').textContent='Merci '+p.prenom+' !';
+ $('oks').textContent=dup?'Votre visite d\'aujourd\'hui était déjà enregistrée.':'Votre visite est enregistrée. À très bientôt sur le stand MAPHAR.'}
+$('f').onsubmit=e=>{e.preventDefault();if(!chk())return;
+ const raw=$('st').value.trim().replace(/^pharmacie\s+/i,''),pf=S[sect][1],lieu=canon($('lieu').value.trim());
+ if(raw)learn('st',raw,sect);if(!LIEUX.includes(lieu))learn('lieu',lieu);
+ send({prenom:cap($('prenom').value.trim()),nom:$('nom').value.trim().toUpperCase(),secteur:sect,structure:raw?(pf?pf+' ':'')+raw:'',lieu,tel:digits($('tel').value),email:$('mail').value.trim().toLowerCase(),produit:prod})};
+try{const p=JSON.parse(localStorage.getItem('jp26')||'null');if(p&&p.tel){$('f').hidden=$('back').hidden=false;$('f').hidden=true;$('bn').textContent=p.prenom+' '+p.nom;$('bo').onclick=()=>send(p);$('bx').onclick=()=>{$('back').hidden=true;$('f').hidden=false}}}catch(e){}
+</script></body></html>

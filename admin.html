@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Espace équipe – MAPHAR JONPCI 2026</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+:root{--bg:#f3f7f5;--card:#fff;--ink:#12201b;--mute:#5d6e67;--line:#d8e2dd;--brand:#0f5c4a;--yes:#1f8a5b;--no:#c9701b;--err:#b3261e;--soft:#eef5f2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button{font-family:inherit}main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:1.25rem;margin:0;color:var(--brand)}h2{font-size:1rem;margin:22px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+input,select{padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink);max-width:100%}
+label{display:block;font-weight:600;font-size:.85rem;margin:12px 0 4px}#lf input{width:100%}
+.go{padding:12px 18px;border:0;border-radius:10px;background:var(--brand);color:#fff;font-weight:700}
+.sec{padding:9px 14px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-weight:600}
+.err{color:var(--err);min-height:1.1em}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+nav{display:flex;gap:6px;margin-bottom:14px}nav button{flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-weight:600}nav button[aria-selected=true]{background:var(--brand);color:#fff;border-color:var(--brand)}
+.fl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}.fl input{flex:1;min-width:150px}
+.bar2{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
+.row{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px}
+.top{display:flex;justify-content:space-between;gap:10px}.m{color:var(--mute);font-size:.85rem}.m a{color:var(--brand)}
+.r{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;flex-shrink:0}
+.b{font-weight:800;font-size:.78rem;padding:3px 9px;border-radius:99px;color:#fff}.b.y{background:var(--yes)}.b.n{background:var(--no)}
+.ed{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.ed input{flex:1;min-width:120px}.x{border:0;background:none;color:var(--mute);text-decoration:underline}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.fig{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}.fig b{display:block;font-size:1.8rem;line-height:1.1}.fig span{color:var(--mute);font-size:.85rem}
+.br{display:grid;grid-template-columns:120px 1fr 34px;gap:8px;align-items:center;margin:6px 0;font-size:.88rem}.br>span:last-child{text-align:right;font-weight:700}
+.bar{display:flex;height:16px;border-radius:4px;overflow:hidden;background:var(--line)}.bar i{display:block}.bar .y{background:var(--yes)}.bar .n{background:var(--no)}.bar .p{background:var(--brand)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}.toast.on{opacity:1}
+[hidden]{display:none!important}
+</style></head><body><main>
+<div id="login" class="card" style="max-width:380px;margin:40px auto"><h1>Espace équipe<br>MAPHAR – JONPCI 2026</h1>
+ <form id="lf"><label for="em">E-mail</label><input id="em" type="email" autocomplete="username"><label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password"><p class="err" id="le"></p><button class="go">Se connecter</button></form></div>
+
+<div id="app" hidden>
+<header><h1>Visites du stand MAPHAR</h1><button class="sec" id="out">Déconnexion</button></header>
+<nav><button data-t="v" aria-selected="true">Visites</button><button data-t="s" aria-selected="false">Statistiques</button><button data-t="e" aria-selected="false">Équipe</button><button data-t="q" aria-selected="false">QR et lien</button></nav>
+<section id="v">
+ <div class="fl"><select id="fj"></select><select id="fp"><option value="">Produit : tous</option><option value="1">Avec produit</option><option value="0">Sans produit</option></select><select id="fs"></select><select id="fl"></select><select id="fu"></select><input id="fq" type="search" placeholder="Rechercher un nom, une structure"></div>
+ <div class="bar2"><span id="cnt" class="m"></span><button class="sec" id="exp">Exporter en CSV</button></div>
+ <div id="list"></div>
+</section>
+<section id="s" hidden></section>
+<section id="e" hidden></section>
+<section id="q" hidden></section>
+</div>
+</main><div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig={
+  apiKey:            "AIzaSyB9zIQ5DqwIBalhfmAr1Ewe5QRlxzgmvCg",
+  authDomain:        "maphar-presence.firebaseapp.com",
+  projectId:         "maphar-presence",
+  storageBucket:     "maphar-presence.firebasestorage.app",
+  messagingSenderId: "560314133390",
+  appId:             "1:560314133390:web:96585236a264d8f8da92df"
+};
+firebase.initializeApp(firebaseConfig);const db=firebase.firestore(),auth=firebase.auth();
+const $=i=>document.getElementById(i),SU=['À traiter','À rappeler','Rendez-vous pris','Souscrit','Sans suite'];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=(a,b)=>b?Math.round(a/b*100)+' %':'–',ftel=t=>String(t||'').replace(/(\d{2})(?=\d)/g,'$1 ');
+const dt=v=>v.ts&&v.ts.toDate?v.ts.toDate():new Date(),hh=v=>dt(v).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2500)}
+let V=[],unsub;
+auth.onAuthStateChanged(u=>{$('login').hidden=!!u;$('app').hidden=!u;if(u){listen();listenT()}else{unsub&&unsub();unsubT&&unsubT()}});
+$('lf').onsubmit=async e=>{e.preventDefault();try{await auth.signInWithEmailAndPassword($('em').value,$('pw').value)}catch(x){$('le').textContent='Connexion refusée : vérifiez l\'e-mail et le mot de passe.'}};
+$('out').onclick=()=>auth.signOut();
+function listen(){unsub&&unsub();unsub=db.collection('jonpci_visites').orderBy('ts','desc').onSnapshot(s=>{V=s.docs.map(d=>({id:d.id,...d.data()}));fill();render()},e=>toast('Lecture impossible : '+e.code))}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===b));['v','s','e','q'].forEach(i=>$(i).hidden=i!==b.dataset.t);render()});
+['fj','fp','fs','fl','fu','fq'].forEach(i=>$(i).oninput=render);
+
+function opts(id,label,key){const el=$(id),cur=el.value,vals=[...new Set(V.map(v=>v[key]).filter(Boolean))].sort();
+ el.innerHTML=`<option value="">${label}</option>`+vals.map(x=>`<option${x===cur?' selected':''}>${esc(x)}</option>`).join('')}
+function fill(){opts('fj','Jour : tous','jour');opts('fs','Secteur : tous','secteur');opts('fl','Lieu : tous','lieu');
+ $('fu').innerHTML='<option value="">Suivi : tous</option>'+SU.map(x=>`<option>${x}</option>`).join('')}
+function filt(){const q=$('fq').value.toLowerCase().trim();
+ return V.filter(v=>(!$('fj').value||v.jour===$('fj').value)&&(!$('fp').value||String(v.produit?1:0)===$('fp').value)&&(!$('fs').value||v.secteur===$('fs').value)&&(!$('fl').value||v.lieu===$('fl').value)&&(!$('fu').value||v.suivi===$('fu').value)&&(!q||(v.prenom+' '+v.nom+' '+v.structure+' '+v.lieu).toLowerCase().includes(q)))}
+
+function render(){if(!$('v').hidden)list();if(!$('s').hidden)stats();if(!$('e').hidden)team();if(!$('q').hidden)qr()}
+function list(){const r=filt();$('cnt').textContent=r.length+' visite(s) affichée(s) sur '+V.length;
+ $('list').innerHTML=r.slice(0,300).map(v=>`<div class="row"><div class="top"><div><b>${esc(v.prenom)} ${esc(v.nom)}</b><div class="m">${esc(v.structure||v.secteur)}, ${esc(v.lieu)}</div><div class="m"><a href="tel:+225${esc(v.tel)}">${ftel(v.tel)}</a>${v.email?', <a href="mailto:'+esc(v.email)+'">'+esc(v.email)+'</a>':''}</div></div><div class="r"><span class="b ${v.produit?'y':'n'}">${v.produit?'Avec produit':'Sans produit'}</span><span class="m">${esc(v.jour)} ${hh(v)}</span><span class="m">${esc(v.secteur)}</span></div></div>
+ <div class="ed" data-id="${v.id}"><select class="sv">${SU.map(x=>`<option${x===v.suivi?' selected':''}>${x}</option>`).join('')}</select><input class="cm" placeholder="Commercial" value="${esc(v.commercial)}"><input class="nt" placeholder="Note" value="${esc(v.note)}"><button class="x">Supprimer</button></div></div>`).join('')||'<p class="m">Aucune visite à afficher.</p>'}
+$('list').onchange=e=>{const t=e.target,id=t.closest('.ed')?.dataset.id;if(!id)return;const k=t.classList.contains('sv')?'suivi':t.classList.contains('cm')?'commercial':'note';
+ db.collection('jonpci_visites').doc(id).update({[k]:t.value}).then(()=>toast('Enregistré')).catch(()=>toast('Modification refusée'))};
+$('list').onclick=e=>{if(!e.target.classList.contains('x'))return;const id=e.target.closest('.ed').dataset.id;if(confirm('Supprimer définitivement cette visite ?'))db.collection('jonpci_visites').doc(id).delete().catch(()=>toast('Suppression refusée'))};
+$('exp').onclick=()=>{const c=s=>'"'+String(s??'').replace(/"/g,'""')+'"',h=['Jour','Heure','Prénom','Nom','Secteur','Structure','Lieu','Téléphone','E-mail','Produit MAPHAR','Source','Suivi','Commercial','Note'];
+ const rows=filt().map(v=>[v.jour,hh(v),v.prenom,v.nom,v.secteur,v.structure,v.lieu,v.tel,v.email,v.produit?'Oui':'Non',v.source,v.suivi,v.commercial,v.note].map(c).join(';'));
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+[h.map(c).join(';'),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='visites-jonpci-2026.csv';a.click()};
+
+function bars(o,cls){const m=Math.max(1,...Object.values(o).map(x=>typeof x==='number'?x:x.y+x.n));
+ return Object.keys(o).map(k=>{const x=o[k];const t=typeof x==='number'?x:x.y+x.n;return `<div class="br"><span>${esc(k)}</span><div class="bar">${typeof x==='number'?`<i class="p" style="width:${x/m*100}%"></i>`:`<i class="y" style="width:${x.y/m*100}%"></i><i class="n" style="width:${x.n/m*100}%"></i>`}</div><span>${t}</span></div>`}).join('')||'<p class="m">Aucune donnée.</p>'}
+function stats(){const tot=V.length,y=V.filter(v=>v.produit).length,P=new Map();V.forEach(v=>P.set(v.tel,v));const py=[...P.values()].filter(v=>v.produit).length;
+ const J={},H={},Sx={},Lx={},So={qr:0,lien:0};
+ V.slice().sort((a,b)=>a.jour<b.jour?-1:1).forEach(v=>{(J[v.jour]??={y:0,n:0})[v.produit?'y':'n']++;const h=dt(v).getHours()+'h';H[h]=(H[h]||0)+1;Sx[v.secteur]=(Sx[v.secteur]||0)+1;Lx[v.lieu]=(Lx[v.lieu]||0)+1;So[v.source]=(So[v.source]||0)+1});
+ const top=Object.fromEntries(Object.entries(Lx).sort((a,b)=>b[1]-a[1]).slice(0,8)),days=Object.keys(J).length;
+ $('s').innerHTML=`<div class="grid"><div class="fig"><b>${tot}</b><span>visites</span></div><div class="fig"><b>${P.size}</b><span>pharmaciens distincts</span></div><div class="fig"><b style="color:var(--yes)">${y}</b><span>avec produit (${pct(y,tot)})</span></div><div class="fig"><b style="color:var(--no)">${tot-y}</b><span>sans produit (${pct(tot-y,tot)})</span></div></div>
+ <h2>Visites par jour</h2><p class="m">Vert : avec produit. Orange : sans produit.</p>${bars(J)}
+ <h2>Visites par heure</h2>${bars(H)}<h2>Par secteur</h2>${bars(Sx)}<h2>Principaux lieux d'exercice</h2>${bars(top)}
+ <h2>Lecture statistique</h2><div class="card"><p>Taux de détention (pharmaciens distincts) : <b>${pct(py,P.size)}</b> (${py} avec, ${P.size-py} sans).</p><p>Moyenne par jour actif : <b>${days?(tot/days).toFixed(1).replace('.',','):'–'}</b> visites. Visites répétées : <b>${tot-P.size}</b>.</p><p>Origine : QR <b>${So.qr||0}</b>, lien <b>${So.lien||0}</b>. Le statut d'un pharmacien distinct est celui de sa dernière visite.</p></div>`}
+let T=[],unsubT;
+const today=()=>new Date().toISOString().slice(0,10),nk=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''),tm=x=>x&&x.toDate?x.toDate().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'–';
+function listenT(){unsubT&&unsubT();unsubT=db.collection('jonpci_equipe').onSnapshot(s=>{T=s.docs.map(d=>({id:d.id,...d.data()}));render()},e=>toast('Lecture équipe impossible : '+e.code))}
+function team(){const cur=$('en')?$('en').value:(localStorage.getItem('jp26_me')||''),t=today(),tj=T.filter(x=>x.jour===t),D={};
+ T.forEach(x=>(D[x.jour]??=[]).push(x));V.forEach(v=>{D[v.jour]??=[]});
+ $('e').innerHTML=`<div class="card"><h2 style="margin-top:0">Marquer ma présence (${t})</h2><div class="fl"><input id="en" placeholder="Prénom et nom" value="${esc(cur)}"><button class="go" id="ep">Je suis présent(e)</button><button class="sec" id="ed">Je pars</button></div></div>
+ <h2>Présents aujourd'hui (${tj.length})</h2>${tj.map(x=>`<div class="row"><div class="top"><div><b>${esc(x.nom)}</b><div class="m">Arrivée ${tm(x.arrivee)}${x.depart?', départ '+tm(x.depart):''}</div></div><button class="x xe" data-id="${x.id}">Supprimer</button></div></div>`).join('')||'<p class="m">Personne n\'a encore marqué sa présence.</p>'}
+ <h2>Présences et visites par jour</h2>${Object.keys(D).sort().reverse().map(d=>{const p=D[d],n=V.filter(v=>v.jour===d).length;return `<div class="row"><div class="top"><div><b>${esc(d)}</b><div class="m">${p.length?esc(p.map(x=>x.nom).join(', ')):'Aucune présence marquée'}</div></div><div class="r"><span><b>${n}</b> visite(s)</span><span class="m">${p.length?(n/p.length).toFixed(1).replace('.',',')+' par commercial présent':''}</span></div></div></div>`}).join('')||'<p class="m">Aucune donnée.</p>'}`}
+$('e').onclick=async e=>{const id=e.target.id,t=today();
+ if(id==='ep'||id==='ed'){const n=$('en').value.trim();if(!n)return toast('Indiquez votre nom');localStorage.setItem('jp26_me',n);
+  const ref=db.collection('jonpci_equipe').doc(t+'_'+nk(n)),ex=T.find(x=>x.id===ref.id);
+  try{if(id==='ep'){if(ex)return toast('Présence déjà marquée');await ref.set({jour:t,nom:n,email:auth.currentUser.email,arrivee:firebase.firestore.FieldValue.serverTimestamp(),depart:null});toast('Présence enregistrée')}
+  else{if(!ex)return toast('Marquez d\'abord votre présence');await ref.update({depart:firebase.firestore.FieldValue.serverTimestamp()});toast('Départ enregistré')}}catch(x){toast('Action refusée')}}
+ else if(e.target.classList.contains('xe')&&confirm('Supprimer cette présence ?'))db.collection('jonpci_equipe').doc(e.target.dataset.id).delete().catch(()=>toast('Suppression refusée'))};
+function qr(){const base=location.href.replace(/admin\.html.*$/,'index.html'),u=base+'?s=qr';
+ $('q').innerHTML=`<div class="card"><h2 style="margin-top:0">QR code à imprimer</h2><img alt="QR code du formulaire" width="260" height="260" src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(u)}&size=260x260&margin=10"><p class="m">Adresse encodée : ${esc(u)}</p><h2>Lien à écrire sous le QR</h2><p>${esc(base)}</p><p class="m">Raccourcissez ce lien avant impression. Les visites arrivées par ce lien sont comptées « lien », celles du QR « QR ».</p></div>`}
+</script></body></html>
