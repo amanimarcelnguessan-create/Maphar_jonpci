@@ -83,7 +83,7 @@ const firebaseConfig={
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 const $=i=>document.getElementById(i),PIN='2026';
-const FONCS=['Commercial','Accueil','Logistique','Communication','Direction','Autre'];
+const FONCS=['Sinistre','Production','Commercial','Santé','Chef d\'agence','Accueil','Secrétaire Administratif','Autre'];
 const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const cap=s=>s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
 const nk=s=>norm(s).replace(/[^a-z0-9]/g,'');
