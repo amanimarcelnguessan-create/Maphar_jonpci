@@ -87,6 +87,7 @@ nav button[aria-selected=true]{background:linear-gradient(135deg,var(--brand2),v
 <nav><button data-t="v" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Visites</button><button data-t="s" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>Stats</button><button data-t="e" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5M17 8a3 3 0 1 1 0 6M17 14.5c2.5.3 4 1.8 4 4.5"/></svg>Équipe</button><button data-t="q" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM19 17h2v4h-4v-2"/></svg>QR</button></nav>
 <section id="v">
  <div id="pulse"></div>
+ <div id="pch"></div>
  <div class="sticky">
  <div class="qd" id="qd"></div>
  <div class="fl"><select id="fj"></select><select id="fp"><option value="">Produit : tous</option><option value="1">Avec produit</option><option value="0">Sans produit</option></select><select id="fs"></select><select id="fl"></select><select id="fu"></select><input id="fq" type="search" placeholder="Rechercher un nom, une structure"></div>
@@ -135,11 +136,21 @@ function fill(){opts('fj','Jour : tous','jour');opts('fs','Secteur : tous','sect
  document.querySelectorAll('#qd button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.d===$('fj').value));
  if(!$('fj').value && days.includes(t))$('fj').value=t}
 $('qd').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('fj').value=b.dataset.d;document.querySelectorAll('#qd button').forEach(x=>x.setAttribute('aria-pressed',x===b));shown=PAGE;render()};
+let presumeMode='';
+function presumeOk(v){if(!presumeMode)return true;
+ if(presumeMode==='mut')return v.secteur==='Officine'&&v.produit;
+ if(presumeMode==='nonmut')return v.secteur==='Officine'&&!v.produit;
+ if(presumeMode==='autres')return v.secteur!=='Officine';return true}
 function filt(){const q=$('fq').value.toLowerCase().trim();
- return V.filter(v=>(!$('fj').value||v.jour===$('fj').value)&&(!$('fp').value||String(v.produit?1:0)===$('fp').value)&&(!$('fs').value||v.secteur===$('fs').value)&&(!$('fl').value||v.lieu===$('fl').value)&&(!$('fu').value||v.suivi===$('fu').value)&&(!q||(v.prenom+' '+v.nom+' '+v.structure+' '+v.lieu).toLowerCase().includes(q)))}
+ return V.filter(v=>(!$('fj').value||v.jour===$('fj').value)&&(!$('fp').value||String(v.produit?1:0)===$('fp').value)&&(!$('fs').value||v.secteur===$('fs').value)&&(!$('fl').value||v.lieu===$('fl').value)&&(!$('fu').value||v.suivi===$('fu').value)&&presumeOk(v)&&(!q||(v.prenom+' '+v.nom+' '+v.structure+' '+v.lieu).toLowerCase().includes(q)))}
+function goTab(t){const b=[...document.querySelectorAll('nav button')].find(x=>x.dataset.t===t);b&&b.click()}
+function openPresume(mode){presumeMode=mode;shown=PAGE;$('fs').value='';$('fp').value='';goTab('v');render()}
 const OBJ=800;
 function pulse(){const t=today(),n=V.filter(v=>v.jour===t).length,pc=Math.min(100,Math.round(n/OBJ*100));
- $('pulse').innerHTML=`<div><b>${n}</b><small>visites aujourd'hui</small></div><div class="pb"><i style="width:${pc}%"></i></div><div style="text-align:right"><b style="font-size:1rem">${pc}%</b><small>de l'objectif (${OBJ})</small></div>`}
+ $('pulse').innerHTML=`<div><b>${n}</b><small>visites aujourd'hui</small></div><div class="pb"><i style="width:${pc}%"></i></div><div style="text-align:right"><b style="font-size:1rem">${pc}%</b><small>de l'objectif (${OBJ})</small></div>`
+ const lbl={mut:'Présumés mutualistes',nonmut:'Présumés non mutualistes',autres:'Autres (hors Officine)'};
+ $('pch').innerHTML=presumeMode?`<div class="chips2"><span>${lbl[presumeMode]} <button id="pclr" style="border:0;background:none;color:var(--brand);font-weight:800;margin-left:6px">✕</button></span></div>`:'';
+ if(presumeMode)$('pclr').onclick=()=>{presumeMode='';shown=PAGE;render()}}
 
 function render(){if(!$('v').hidden){pulse();list()}if(!$('s').hidden)stats();if(!$('e').hidden)team();if(!$('q').hidden)qr()}
 const ini=v=>((v.prenom||'?')[0]+(v.nom||'?')[0]).toUpperCase();
@@ -166,10 +177,20 @@ function stats(){const tot=V.length,y=V.filter(v=>v.produit).length,P=new Map();
  const J={},H={},Sx={},Lx={},So={qr:0,lien:0};
  V.slice().sort((a,b)=>a.jour<b.jour?-1:1).forEach(v=>{(J[v.jour]??={y:0,n:0})[v.produit?'y':'n']++;const h=dt(v).getHours()+'h';H[h]=(H[h]||0)+1;Sx[v.secteur]=(Sx[v.secteur]||0)+1;Lx[v.lieu]=(Lx[v.lieu]||0)+1;So[v.source]=(So[v.source]||0)+1});
  const top=Object.fromEntries(Object.entries(Lx).sort((a,b)=>b[1]-a[1]).slice(0,8)),days=Object.keys(J).length;
- $('s').innerHTML=`<div class="grid"><div class="fig"><div class="ic" style="background:var(--brand)"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><b>${tot}</b><span>visites</span></div></div><div class="fig"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5"/></svg></div><div><b>${P.size}</b><span>pharmaciens distincts</span></div></div><div class="fig"><div class="ic" style="background:var(--yes)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div><div><b style="color:var(--yes)">${y}</b><span>avec produit (${pct(y,tot)})</span></div></div><div class="fig"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${tot-y}</b><span>sans produit (${pct(tot-y,tot)})</span></div></div></div>
+ const off=V.filter(v=>v.secteur==='Officine'),mut=off.filter(v=>v.produit).length,nonmut=off.filter(v=>!v.produit).length,autres=V.length-off.length;
+ $('s').innerHTML=`<h2 style="margin-top:18px">Répartition présumée <span class="m" style="font-weight:400">· touchez une carte pour voir le détail</span></h2>
+ <div class="grid">
+ <div class="fig" id="pv" style="cursor:pointer"><div class="ic" style="background:var(--brand)"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><b>${tot}</b><span>visites</span></div></div>
+ <div class="fig" id="pm" style="cursor:pointer"><div class="ic" style="background:var(--yes)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div><div><b style="color:var(--yes)">${mut}</b><span>présumés mutualistes (${pct(mut,tot)})</span></div></div>
+ <div class="fig" id="pn" style="cursor:pointer"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${nonmut}</b><span>présumés non mutualistes (${pct(nonmut,tot)})</span></div></div>
+ <div class="fig" id="pa" style="cursor:pointer"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div><b style="color:var(--gold)">${autres}</b><span>autres, hors Officine (${pct(autres,tot)})</span></div></div>
+ </div>
+ <h2>Vue d'ensemble</h2>
+ <div class="grid"><div class="fig"><div class="ic" style="background:var(--brand)"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><b>${tot}</b><span>visites</span></div></div><div class="fig"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5"/></svg></div><div><b>${P.size}</b><span>pharmaciens distincts</span></div></div><div class="fig"><div class="ic" style="background:var(--yes)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div><div><b style="color:var(--yes)">${y}</b><span>avec produit (${pct(y,tot)})</span></div></div><div class="fig"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${tot-y}</b><span>sans produit (${pct(tot-y,tot)})</span></div></div></div>
  <h2>Visites par jour</h2><p class="m" style="margin:0 18px 8px">Vert : avec produit. Orange : sans produit.</p><div style="padding:0 18px">${bars(J)}</div>
  <h2>Visites par heure</h2><div style="padding:0 18px">${bars(H)}</div><h2>Par secteur</h2><div style="padding:0 18px">${bars(Sx)}</div><h2>Principaux lieux d'exercice</h2><div style="padding:0 18px">${bars(top)}</div>
- <h2>Lecture statistique</h2><div class="card"><p>Taux de détention (pharmaciens distincts) : <b>${pct(py,P.size)}</b> (${py} avec, ${P.size-py} sans).</p><p>Moyenne par jour actif : <b>${days?(tot/days).toFixed(1).replace('.',','):'–'}</b> visites. Visites répétées : <b>${tot-P.size}</b>.</p><p>Origine : QR <b>${So.qr||0}</b>, lien <b>${So.lien||0}</b>. Le statut d'un pharmacien distinct est celui de sa dernière visite.</p></div>`}
+ <h2>Lecture statistique</h2><div class="card"><p>Taux de détention (pharmaciens distincts) : <b>${pct(py,P.size)}</b> (${py} avec, ${P.size-py} sans).</p><p>Moyenne par jour actif : <b>${days?(tot/days).toFixed(1).replace('.',','):'–'}</b> visites. Visites répétées : <b>${tot-P.size}</b>.</p><p>Origine : QR <b>${So.qr||0}</b>, lien <b>${So.lien||0}</b>. Le statut d'un pharmacien distinct est celui de sa dernière visite.</p></div>`
+ $('pv').onclick=()=>openPresume('');$('pm').onclick=()=>openPresume('mut');$('pn').onclick=()=>openPresume('nonmut');$('pa').onclick=()=>openPresume('autres')}
 let T=[],unsubT;
 const today=()=>new Date().toISOString().slice(0,10),nk=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''),tm=x=>x&&x.toDate?x.toDate().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'–';
 function listenT(){unsubT&&unsubT();unsubT=db.collection('jonpci_equipe').onSnapshot(s=>{T=s.docs.map(d=>({id:d.id,...d.data()}));render()},e=>toast('Lecture équipe impossible : '+e.code))}
