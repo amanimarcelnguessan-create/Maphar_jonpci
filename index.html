@@ -61,6 +61,13 @@ input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(15,
 .sg{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
 .sg button{padding:7px 12px;border-radius:99px;border:1px solid var(--line);background:#eef3f0;color:var(--ink);font:600 .82rem 'Figtree'}
 
+.prow{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow .pl{flex:1;font-size:.86rem;font-weight:600;line-height:1.25}
+.ptog{display:flex;gap:6px;flex-shrink:0}
+.ptog button{padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--mute);font:700 .72rem 'Figtree';white-space:nowrap}
+.ptog button.have[aria-pressed=true]{background:var(--brand2);border-color:var(--brand2);color:#fff}
+.ptog button.want[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#3a2c05}
 .yn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
 .yn button{padding:18px 8px;border-radius:15px;border:2px solid var(--line);background:#fff;color:var(--ink);font:700 1rem 'Figtree';display:flex;flex-direction:column;align-items:center;gap:6px}
 .yn button svg{width:22px;height:22px;stroke:var(--mute);fill:none;stroke-width:2.2}
@@ -142,17 +149,23 @@ input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(15,
  </div>
 
  <div class="panel" data-p="3">
-  <div class="stepnum"><b>3</b><span>Dernière étape</span></div><h2>Un produit MAPHAR ?</h2>
-  <label style="margin-top:0">Disposez-vous déjà d'un produit MAPHAR ?</label>
-  <div class="yn">
-   <button type="button" class="y" data-v="1" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg>Oui</button>
-   <button type="button" class="n" data-v="0" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>Non</button>
-  </div>
+  <div class="stepnum"><b>3</b><span>Dernière étape</span></div><h2>Vos produits</h2>
+  <label style="margin-top:0">Pour chaque produit, cochez ce que vous avez déjà et ce qui vous intéresse</label>
+  <div id="prods"></div>
+  <label for="ech">Mois d'échéance assurance auto ou santé (facultatif)</label>
+  <select id="ech"><option value="">—</option></select>
   <p class="err" id="err" role="alert"></p>
   <div class="nav"><button class="btn ghost" type="button" id="p3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button><button class="btn primary" id="go">Valider ma visite</button></div>
   <p class="fine">En validant, vous acceptez que la MAPHAR puisse vous recontacter.</p>
  </div>
 </form>
+
+<section id="extra" hidden>
+ <div class="stepnum"><b>+</b><span>Bonus, 30 secondes</span></div><h2>Vos produits MAPHAR</h2>
+ <p class="fine" style="text-align:left;margin:0 0 14px">Cochez ce qui vous concerne. Entièrement facultatif.</p>
+ <div id="plist"></div>
+ <div class="nav"><button class="btn ghost" type="button" id="pskip">Passer</button><button class="btn primary" type="button" id="psave">Enregistrer</button></div>
+</section>
 
 <section id="ok" class="center" hidden>
  <div class="confetti" id="cf"></div>
@@ -186,7 +199,10 @@ const S={'Officine':['Officine','Pharmacie'],'Hôpital ou clinique':['Établisse
 const SICON={'Officine':'M4 21V9l8-6 8 6v12M9 21v-6h6v6','Hôpital ou clinique':'M12 3v18M3 12h18M9 7h6v3H9z','Grossiste':'M3 7l2-4h14l2 4M3 7h18M3 7v13h18V7M9 21v-6h6v6','Industrie':'M3 21V10l5 3V10l5 3V7l5 3v11H3z','Étudiant':'M2 9l10-5 10 5-10 5-10-5zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5','Autre':'M12 5v14M5 12h14'};
 const LIEUX=['Abobo','Adjamé','Anyama','Attécoubé','Bingerville','Cocody','Koumassi','Marcory','Plateau','Port-Bouët','Songon','Treichville','Yopougon','Grand-Bassam','Dabou','Jacqueville','Bouaké','Yamoussoukro','San-Pédro','Daloa','Korhogo','Man','Gagnoa','Abengourou','Divo','Soubré','Odienné','Bondoukou','Séguéla','Ferkessédougou','Agboville','Aboisso','Sassandra','Katiola','Dimbokro','Adzopé'];
 const DOM=['gmail.com','yahoo.fr','yahoo.com','outlook.com','hotmail.com','icloud.com'],FIX={'gmial.com':'gmail.com','gmai.com':'gmail.com','gamil.com':'gmail.com','gmail.co':'gmail.com','yaho.fr':'yahoo.fr','hotmial.com':'hotmail.com'};
-let sect='',prod=null,step=1;const L={lieu:[],st:[]};
+let sect='',step=1;const L={lieu:[],st:[]};
+const PRODUCTS=[['sante_mci','Assurance santé : MCI CARE'],['sante_axa','Assurance santé : AXA-CI (Yafolo)'],['auto','Assurance automobile'],['multirisque_pro','Multirisque professionnelle'],['multirisque_hab','Multirisque habitation'],['individuel_accident','Individuel accident'],['rc','Responsabilité civile'],['vie','Assurance vie : PHARMA VIE · SUNU · LEADWAY Vie'],['carburant','Carte carburant TOTALENERGIES'],['securite','Sécurité : 911 SECURITY · FLASH INTERVENTION'],['auto_partenaire','Automobile : SAM MOTORS · HR & UNITED MOTORS']];
+const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const prodState={};PRODUCTS.forEach(([k])=>prodState[k]={have:false,want:false});
 const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const cap=s=>s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
 const canon=l=>LIEUX.find(x=>norm(x)===norm(l))||cap(l);
@@ -203,7 +219,11 @@ Object.keys(S).forEach(k=>{const b=document.createElement('button');b.type='butt
  b.innerHTML=`<svg viewBox="0 0 24 24"><path d="${SICON[k]}"/></svg>${k}`;
  b.onclick=()=>{sect=k;$('stl').textContent=S[k][0]+(k==='Officine'?'':' (facultatif)');$('pf').textContent=S[k][1];$('pf').hidden=!S[k][1];
   document.querySelectorAll('#sect .chip').forEach(x=>x.setAttribute('aria-pressed',x===b))};$('sect').append(b)});
-document.querySelectorAll('.yn button').forEach(b=>b.onclick=()=>{prod=b.dataset.v==='1';document.querySelectorAll('.yn button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('err').textContent=''});
+PRODUCTS.forEach(([k,label])=>{const r=document.createElement('div');r.className='prow';
+ r.innerHTML=`<span class="pl">${label}</span><div class="ptog"><button type="button" class="have" data-k="${k}" aria-pressed="false">J'en ai</button><button type="button" class="want" data-k="${k}" aria-pressed="false">Intéressé·e</button></div>`;$('prods').append(r)});
+$('prods').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k,t=b.classList.contains('have')?'have':'want';
+ prodState[k][t]=!prodState[k][t];b.setAttribute('aria-pressed',prodState[k][t])};
+MOIS.forEach(m=>{const o=document.createElement('option');o.textContent=m;$('ech').append(o)});
 $('tel').oninput=e=>e.target.value=digits(e.target.value).replace(/(\d{2})(?=\d)/g,'$1 ');
 $('prenom').onblur=()=>$('prenom').value=cap($('prenom').value.trim());
 $('nom').onblur=()=>$('nom').value=$('nom').value.trim().toUpperCase();
@@ -224,7 +244,6 @@ $('f').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='IN
 
 function confetti(){const c=$('cf'),cols=['#c9a24b','#1f8a5b','#0f5c4a','#e8c876'];for(let i=0;i<26;i++){const s=document.createElement('i');
  s.style.left=Math.random()*100+'%';s.style.background=cols[i%cols.length];s.style.animationDuration=(1.4+Math.random()*.9)+'s';s.style.animationDelay=(Math.random()*.3)+'s';c.append(s)}}
-function chk(){return prod===null?'Répondez à la question sur le produit MAPHAR.':''}
 const learn=(t,label,s)=>db.collection('jonpci_suggestions').doc(t+'_'+kk(label)).set({t,label,s:s||''}).catch(()=>{});
 const rec=p=>({...p,jour:new Date().toISOString().slice(0,10),source:SRC,ts:firebase.firestore.FieldValue.serverTimestamp(),suivi:'À traiter',commercial:'',note:''});
 async function send(p){const d=rec(p),r=db.collection('jonpci_visites').doc(d.jour+'_'+d.tel).set(d);r.catch(()=>{});let dup=false;
@@ -234,10 +253,11 @@ async function send(p){const d=rec(p),r=db.collection('jonpci_visites').doc(d.jo
  $('okn').textContent=p.prenom;$('oks').textContent=dup?'Votre visite d\'aujourd\'hui était déjà enregistrée.':'Votre visite est enregistrée. À très bientôt sur le stand MAPHAR.';
  $('pn').textContent=p.prenom+' '+p.nom;$('pm').textContent=(p.prenom[0]||'')+(p.nom[0]||'');
  $('pj').textContent=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});confetti()}
-$('f').onsubmit=e=>{e.preventDefault();const er=chk();if(er){$('err').textContent=er;return}
+$('f').onsubmit=e=>{e.preventDefault();
  const raw=$('st').value.trim().replace(/^pharmacie\s+/i,''),pf=S[sect][1],lieu=canon($('lieu').value.trim());
  if(raw)learn('st',raw,sect);if(!LIEUX.includes(lieu))learn('lieu',lieu);
- send({prenom:cap($('prenom').value.trim()),nom:$('nom').value.trim().toUpperCase(),secteur:sect,structure:raw?(pf?pf+' ':'')+raw:'',lieu,tel:digits($('tel').value),email:$('mail').value.trim().toLowerCase(),produit:prod})};
+ const produit=Object.values(prodState).some(x=>x.have);
+ send({prenom:cap($('prenom').value.trim()),nom:$('nom').value.trim().toUpperCase(),secteur:sect,structure:raw?(pf?pf+' ':'')+raw:'',lieu,tel:digits($('tel').value),email:$('mail').value.trim().toLowerCase(),produit,produits:{...prodState},echeance:$('ech').value})};
 try{const p=JSON.parse(localStorage.getItem('jp26')||'null');if(p&&p.tel){$('f').hidden=true;document.querySelector('.steps').hidden=true;$('back').hidden=false;$('bn').textContent=p.prenom;
  $('bo').onclick=()=>send(p);$('bx').onclick=()=>{$('back').hidden=true;$('f').hidden=false;document.querySelector('.steps').hidden=false}}}catch(e){}
 </script></body></html>

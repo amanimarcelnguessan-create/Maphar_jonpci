@@ -154,10 +154,12 @@ function pulse(){const t=today(),n=V.filter(v=>v.jour===t).length,pc=Math.min(10
 
 function render(){if(!$('v').hidden){pulse();list()}if(!$('s').hidden)stats();if(!$('e').hidden)team();if(!$('q').hidden)qr()}
 const ini=v=>((v.prenom||'?')[0]+(v.nom||'?')[0]).toUpperCase();
+const PLABEL=[['sante_mci','MCI CARE'],['sante_axa','AXA-CI (Yafolo)'],['auto','Auto'],['multirisque_pro','Multirisque pro'],['multirisque_hab','Multirisque habitation'],['individuel_accident','Individuel accident'],['rc','Resp. civile'],['vie','Vie'],['carburant','Carte carburant'],['securite','Sécurité'],['auto_partenaire','Auto partenaire']];
 function list(){const all=filt(),r=all.slice(0,shown);$('cnt').textContent=all.length+' visite(s) affichée(s) sur '+V.length;
  $('list').innerHTML=r.map(v=>{const open=v.id===expandedId;return `<div class="crow${open?' open':''}" style="border-left-color:var(${v.produit?'--yes':'--no'})" data-id="${v.id}"><div class="av">${ini(v)}</div><div class="nm"><b>${esc(v.prenom)} ${esc(v.nom)}</b><span>${esc(v.structure||v.secteur)} · ${esc(v.lieu)}</span></div><span class="dot ${v.produit?'y':'n'}"></span><span class="hh">${hh(v)}</span><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
  ${open?`<div class="exp" data-id="${v.id}">
   <p class="m" style="margin:0 0 8px"><a href="tel:+225${esc(v.tel)}">${ftel(v.tel)}</a>${v.email?', <a href="mailto:'+esc(v.email)+'">'+esc(v.email)+'</a>':''} · ${esc(v.jour)} · ${esc(v.secteur)} · ${v.produit?'Avec produit':'Sans produit'}</p>
+  ${v.produits?`<div class="chips2">${PLABEL.filter(([k])=>v.produits[k]?.have||v.produits[k]?.want).map(([k,l])=>`<span>${esc(l)} ${v.produits[k].have?'· déjà':''}${v.produits[k].want?'· intéressé·e':''}</span>`).join('')||'<span>Aucun produit coché</span>'}${v.echeance?`<span>Échéance ${esc(v.echeance)}</span>`:''}</div>`:''}
   <div class="ed" data-id="${v.id}"><select class="sv">${SU.map(x=>`<option${x===v.suivi?' selected':''}>${x}</option>`).join('')}</select><input class="cm" placeholder="Commercial" value="${esc(v.commercial)}"><input class="nt" placeholder="Note" value="${esc(v.note)}"><button class="x">Supprimer</button></div></div>`:''}`}).join('')
  +(all.length>shown?`<button class="loadmore" id="more">Charger plus (${all.length-shown} restantes)</button>`:'')
  ||'<p class="m">Aucune visite à afficher.</p>'}
@@ -167,8 +169,9 @@ $('list').onclick=e=>{
  const row=e.target.closest('.crow');if(row){expandedId=expandedId===row.dataset.id?null:row.dataset.id;list()}};
 $('list').onchange=e=>{const t=e.target,id=t.closest('.ed')?.dataset.id;if(!id)return;const k=t.classList.contains('sv')?'suivi':t.classList.contains('cm')?'commercial':'note';
  db.collection('jonpci_visites').doc(id).update({[k]:t.value}).then(()=>toast('Enregistré')).catch(()=>toast('Modification refusée'))};
-$('exp').onclick=()=>{const c=s=>'"'+String(s??'').replace(/"/g,'""')+'"',h=['Jour','Heure','Prénom','Nom','Secteur','Structure','Lieu','Téléphone','E-mail','Produit MAPHAR','Source','Suivi','Commercial','Note'];
- const rows=filt().map(v=>[v.jour,hh(v),v.prenom,v.nom,v.secteur,v.structure,v.lieu,v.tel,v.email,v.produit?'Oui':'Non',v.source,v.suivi,v.commercial,v.note].map(c).join(';'));
+$('exp').onclick=()=>{const c=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+ const h=['Jour','Heure','Prénom','Nom','Secteur','Structure','Lieu','Téléphone','E-mail','Produit MAPHAR','Source','Suivi','Commercial','Note','Échéance',...PLABEL.flatMap(([,l])=>[l+' (déjà)',l+' (intérêt)'])];
+ const rows=filt().map(v=>[v.jour,hh(v),v.prenom,v.nom,v.secteur,v.structure,v.lieu,v.tel,v.email,v.produit?'Oui':'Non',v.source,v.suivi,v.commercial,v.note,v.echeance||'',...PLABEL.flatMap(([k])=>[v.produits?.[k]?.have?'Oui':'',v.produits?.[k]?.want?'Oui':''])].map(c).join(';'));
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+[h.map(c).join(';'),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='visites-jonpci-2026.csv';a.click()};
 
 function bars(o,cls){const m=Math.max(1,...Object.values(o).map(x=>typeof x==='number'?x:x.y+x.n));
@@ -185,8 +188,6 @@ function stats(){const tot=V.length,y=V.filter(v=>v.produit).length,P=new Map();
  <div class="fig" id="pn" style="cursor:pointer"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${nonmut}</b><span>présumés non mutualistes (${pct(nonmut,tot)})</span></div></div>
  <div class="fig" id="pa" style="cursor:pointer"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div><b style="color:var(--gold)">${autres}</b><span>autres, hors Officine (${pct(autres,tot)})</span></div></div>
  </div>
- <h2>Vue d'ensemble</h2>
- <div class="grid"><div class="fig"><div class="ic" style="background:var(--brand)"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><b>${tot}</b><span>visites</span></div></div><div class="fig"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.5-5.5 6-5.5s6 2 6 5.5"/></svg></div><div><b>${P.size}</b><span>pharmaciens distincts</span></div></div><div class="fig"><div class="ic" style="background:var(--yes)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div><div><b style="color:var(--yes)">${y}</b><span>avec produit (${pct(y,tot)})</span></div></div><div class="fig"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${tot-y}</b><span>sans produit (${pct(tot-y,tot)})</span></div></div></div>
  <h2>Visites par jour</h2><p class="m" style="margin:0 18px 8px">Vert : avec produit. Orange : sans produit.</p><div style="padding:0 18px">${bars(J)}</div>
  <h2>Visites par heure</h2><div style="padding:0 18px">${bars(H)}</div><h2>Par secteur</h2><div style="padding:0 18px">${bars(Sx)}</div><h2>Principaux lieux d'exercice</h2><div style="padding:0 18px">${bars(top)}</div>
  <h2>Lecture statistique</h2><div class="card"><p>Taux de détention (pharmaciens distincts) : <b>${pct(py,P.size)}</b> (${py} avec, ${P.size-py} sans).</p><p>Moyenne par jour actif : <b>${days?(tot/days).toFixed(1).replace('.',','):'–'}</b> visites. Visites répétées : <b>${tot-P.size}</b>.</p><p>Origine : QR <b>${So.qr||0}</b>, lien <b>${So.lien||0}</b>. Le statut d'un pharmacien distinct est celui de sa dernière visite.</p></div>`
