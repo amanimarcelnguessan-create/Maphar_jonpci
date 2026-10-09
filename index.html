@@ -63,6 +63,12 @@ input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(15,
 
 .prow{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line)}
 .prow:last-child{border-bottom:0}
+.prow.sub{padding-left:16px;background:#faf8f3}
+.pgrp{display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--line);cursor:pointer;background:#fbfaf6}
+.pgrp .pl{flex:1;font-weight:700;font-size:.86rem}
+.pgrp .pct{font-size:.74rem;font-weight:700;color:var(--brand2);background:#eaf4ef;padding:3px 8px;border-radius:99px;flex-shrink:0}
+.pgrp .chev{width:15px;height:15px;stroke:var(--mute);fill:none;stroke-width:2.4;flex-shrink:0;transition:transform .15s}
+.pgrp .chev.open{transform:rotate(90deg)}
 .prow .pl{flex:1;font-size:.86rem;font-weight:600;line-height:1.25}
 .ptog{display:flex;gap:6px;flex-shrink:0}
 .ptog button{padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--mute);font:700 .72rem 'Figtree';white-space:nowrap}
@@ -214,8 +220,17 @@ const SICON={'Officine':'M4 21V9l8-6 8 6v12M9 21v-6h6v6','Hôpital ou clinique':
 const LIEUX=['Abobo','Adjamé','Anyama','Attécoubé','Bingerville','Cocody','Koumassi','Marcory','Plateau','Port-Bouët','Songon','Treichville','Yopougon','Grand-Bassam','Dabou','Jacqueville','Bouaké','Yamoussoukro','San-Pédro','Daloa','Korhogo','Man','Gagnoa','Abengourou','Divo','Soubré','Odienné','Bondoukou','Séguéla','Ferkessédougou','Agboville','Aboisso','Sassandra','Katiola','Dimbokro','Adzopé'];
 const DOM=['gmail.com','yahoo.fr','yahoo.com','outlook.com','hotmail.com','icloud.com'],FIX={'gmial.com':'gmail.com','gmai.com':'gmail.com','gamil.com':'gmail.com','gmail.co':'gmail.com','yaho.fr':'yahoo.fr','hotmial.com':'hotmail.com'};
 let sect='',step=1;const L={lieu:[],st:[]};
-const PRODUCTS=[['sante_mci','Assurance santé : MCI CARE'],['sante_axa','Assurance santé : AXA-CI (Yafolo)'],['auto','Assurance automobile'],['multirisque_pro','Multirisque professionnelle'],['multirisque_hab','Multirisque habitation'],['individuel_accident','Individuel accident'],['rc','Responsabilité civile'],['vie','Assurance vie : PHARMA VIE · SUNU · LEADWAY Vie'],['carburant','Carte carburant TOTALENERGIES'],['securite','Sécurité : 911 SECURITY · FLASH INTERVENTION'],['auto_partenaire','Automobile : SAM MOTORS · HR & UNITED MOTORS']];
-const prodState={};PRODUCTS.forEach(([k])=>prodState[k]={have:null,want:false});
+const PRODUCTS=[
+ ['sante_mci','Assurance santé : MCI CARE'],['sante_axa','Assurance santé : AXA-CI (Yafolo)'],
+ ['auto','Assurance automobile'],['multirisque_pro','Multirisque professionnelle'],['multirisque_hab','Multirisque habitation'],
+ ['individuel_accident','Individuel accident'],['rc','Responsabilité civile'],
+ {grp:'vie_grp',label:'Assurance Vie',items:[['vie_pharmavie','PHARMA VIE'],['vie_sunu','SUNU Assurance'],['vie_leadway','LEADWAY Vie']]},
+ {grp:'secu_grp',label:'Sécurité',items:[['secu_911','911 Security'],['secu_flash','Flash Intervention']]},
+ {grp:'mob_grp',label:'Partenaires Mobilité',items:[['mob_sammotors','SAM MOTORS'],['mob_hrunited','HR & United Motors'],['mob_carburant','Carte carburant TOTALENERGIES']]}
+];
+const ALL_KEYS=PRODUCTS.flatMap(e=>e.grp?e.items.map(i=>i[0]):[e[0]]);
+const prodState={};ALL_KEYS.forEach(k=>prodState[k]={have:null,want:false});
+const openGroups={};
 let membre=null,contact=null;
 const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const cap=s=>s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
@@ -233,13 +248,20 @@ Object.keys(S).forEach(k=>{const b=document.createElement('button');b.type='butt
  b.innerHTML=`<svg viewBox="0 0 24 24"><path d="${SICON[k]}"/></svg>${k}`;
  b.onclick=()=>{sect=k;$('stl').textContent=S[k][0]+(k==='Officine'?'':' (facultatif)');$('pf').textContent=S[k][1];$('pf').hidden=!S[k][1];
   document.querySelectorAll('#sect .chip').forEach(x=>x.setAttribute('aria-pressed',x===b))};$('sect').append(b)});
-function renderProds(){$('prods').innerHTML=PRODUCTS.map(([k,label])=>{const s=prodState[k];
- return `<div class="prow"><span class="pl">${label}</span><div class="ptog"><button type="button" class="yv" data-k="${k}" aria-pressed="${s.have===true}">Oui</button><button type="button" class="nv" data-k="${k}" aria-pressed="${s.have===false}">Non</button>${s.have===false?`<button type="button" class="wv" data-k="${k}" aria-pressed="${s.want===true}">Intéressé·e</button>`:''}</div></div>`}).join('')}
-$('prods').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k;
- if(b.classList.contains('yv')){prodState[k].have=true;prodState[k].want=false}
- else if(b.classList.contains('nv')){prodState[k].have=false}
- else if(b.classList.contains('wv')){prodState[k].want=!prodState[k].want}
- renderProds()};
+function prowHTML(k,label,sub){const s=prodState[k];
+ return `<div class="prow${sub?' sub':''}"><span class="pl">${label}</span><div class="ptog"><button type="button" class="yv" data-k="${k}" aria-pressed="${s.have===true}">Oui</button><button type="button" class="nv" data-k="${k}" aria-pressed="${s.have===false}">Non</button>${s.have===false?`<button type="button" class="wv" data-k="${k}" aria-pressed="${s.want===true}">Intéressé·e</button>`:''}</div></div>`}
+function renderProds(){$('prods').innerHTML=PRODUCTS.map(e=>{
+ if(!e.grp)return prowHTML(e[0],e[1],false);
+ const n=e.items.filter(([k])=>prodState[k].have===true).length,open=!!openGroups[e.grp];
+ return `<div class="pgrp" data-g="${e.grp}"><span class="pl">${e.label}</span>${n?`<span class="pct">${n}/${e.items.length} ✓</span>`:''}<svg class="chev${open?' open':''}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+ ${open?e.items.map(([k,l])=>prowHTML(k,l,true)).join(''):''}`}).join('')}
+$('prods').onclick=e=>{const b=e.target.closest('button');
+ if(b){const k=b.dataset.k;
+  if(b.classList.contains('yv')){prodState[k].have=true;prodState[k].want=false}
+  else if(b.classList.contains('nv')){prodState[k].have=false}
+  else if(b.classList.contains('wv')){prodState[k].want=!prodState[k].want}
+  return renderProds()}
+ const g=e.target.closest('.pgrp');if(g){openGroups[g.dataset.g]=!openGroups[g.dataset.g];renderProds()}};
 document.querySelectorAll('#mb button').forEach(b=>b.onclick=()=>{membre=b.dataset.v==='1';document.querySelectorAll('#mb button').forEach(x=>x.setAttribute('aria-pressed',x===b));
  $('nonblock').hidden=membre!==false;$('prodblock').hidden=membre!==true;if(membre===true)renderProds();$('err').textContent=''});
 document.querySelectorAll('#ct button').forEach(b=>b.onclick=()=>{contact=b.dataset.v==='1';document.querySelectorAll('#ct button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('err').textContent=''});
