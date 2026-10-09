@@ -66,8 +66,10 @@ input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(15,
 .prow .pl{flex:1;font-size:.86rem;font-weight:600;line-height:1.25}
 .ptog{display:flex;gap:6px;flex-shrink:0}
 .ptog button{padding:8px 10px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--mute);font:700 .72rem 'Figtree';white-space:nowrap}
-.ptog button.have[aria-pressed=true]{background:var(--brand2);border-color:var(--brand2);color:#fff}
-.ptog button.want[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#3a2c05}
+.ptog button.yv[aria-pressed=true]{background:var(--brand2);border-color:var(--brand2);color:#fff}
+.ptog button.nv[aria-pressed=true]{background:var(--no);border-color:var(--no);color:#fff}
+.ptog button.wv{background:#fdf6e8}.ptog button.wv[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:#3a2c05}
+.prow{flex-wrap:wrap}
 .yn{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
 .yn button{padding:18px 8px;border-radius:15px;border:2px solid var(--line);background:#fff;color:var(--ink);font:700 1rem 'Figtree';display:flex;flex-direction:column;align-items:center;gap:6px}
 .yn button svg{width:22px;height:22px;stroke:var(--mute);fill:none;stroke-width:2.2}
@@ -149,11 +151,23 @@ input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(15,
  </div>
 
  <div class="panel" data-p="3">
-  <div class="stepnum"><b>3</b><span>Dernière étape</span></div><h2>Vos produits</h2>
-  <label style="margin-top:0">Pour chaque produit, cochez ce que vous avez déjà et ce qui vous intéresse</label>
-  <div id="prods"></div>
-  <label for="ech">Mois d'échéance assurance auto ou santé (facultatif)</label>
-  <select id="ech"><option value="">—</option></select>
+  <div class="stepnum"><b>3</b><span>Dernière étape</span></div><h2>Mutualiste MAPHAR ?</h2>
+  <label style="margin-top:0">Êtes-vous mutualiste MAPHAR ?</label>
+  <div class="yn" id="mb">
+   <button type="button" class="y" data-v="1" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg>Oui</button>
+   <button type="button" class="n" data-v="0" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>Non</button>
+  </div>
+  <div id="nonblock" hidden>
+   <label>Souhaiteriez-vous être contacté·e ?</label>
+   <div class="yn" id="ct">
+    <button type="button" class="y" data-v="1" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg>Oui</button>
+    <button type="button" class="n" data-v="0" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>Non</button>
+   </div>
+  </div>
+  <div id="prodblock" hidden>
+   <label>Quels produits MAPHAR avez-vous ?</label>
+   <div id="prods"></div>
+  </div>
   <p class="err" id="err" role="alert"></p>
   <div class="nav"><button class="btn ghost" type="button" id="p3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button><button class="btn primary" id="go">Valider ma visite</button></div>
   <p class="fine">En validant, vous acceptez que la MAPHAR puisse vous recontacter.</p>
@@ -201,8 +215,8 @@ const LIEUX=['Abobo','Adjamé','Anyama','Attécoubé','Bingerville','Cocody','Ko
 const DOM=['gmail.com','yahoo.fr','yahoo.com','outlook.com','hotmail.com','icloud.com'],FIX={'gmial.com':'gmail.com','gmai.com':'gmail.com','gamil.com':'gmail.com','gmail.co':'gmail.com','yaho.fr':'yahoo.fr','hotmial.com':'hotmail.com'};
 let sect='',step=1;const L={lieu:[],st:[]};
 const PRODUCTS=[['sante_mci','Assurance santé : MCI CARE'],['sante_axa','Assurance santé : AXA-CI (Yafolo)'],['auto','Assurance automobile'],['multirisque_pro','Multirisque professionnelle'],['multirisque_hab','Multirisque habitation'],['individuel_accident','Individuel accident'],['rc','Responsabilité civile'],['vie','Assurance vie : PHARMA VIE · SUNU · LEADWAY Vie'],['carburant','Carte carburant TOTALENERGIES'],['securite','Sécurité : 911 SECURITY · FLASH INTERVENTION'],['auto_partenaire','Automobile : SAM MOTORS · HR & UNITED MOTORS']];
-const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const prodState={};PRODUCTS.forEach(([k])=>prodState[k]={have:false,want:false});
+const prodState={};PRODUCTS.forEach(([k])=>prodState[k]={have:null,want:false});
+let membre=null,contact=null;
 const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const cap=s=>s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
 const canon=l=>LIEUX.find(x=>norm(x)===norm(l))||cap(l);
@@ -219,11 +233,16 @@ Object.keys(S).forEach(k=>{const b=document.createElement('button');b.type='butt
  b.innerHTML=`<svg viewBox="0 0 24 24"><path d="${SICON[k]}"/></svg>${k}`;
  b.onclick=()=>{sect=k;$('stl').textContent=S[k][0]+(k==='Officine'?'':' (facultatif)');$('pf').textContent=S[k][1];$('pf').hidden=!S[k][1];
   document.querySelectorAll('#sect .chip').forEach(x=>x.setAttribute('aria-pressed',x===b))};$('sect').append(b)});
-PRODUCTS.forEach(([k,label])=>{const r=document.createElement('div');r.className='prow';
- r.innerHTML=`<span class="pl">${label}</span><div class="ptog"><button type="button" class="have" data-k="${k}" aria-pressed="false">J'en ai</button><button type="button" class="want" data-k="${k}" aria-pressed="false">Intéressé·e</button></div>`;$('prods').append(r)});
-$('prods').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k,t=b.classList.contains('have')?'have':'want';
- prodState[k][t]=!prodState[k][t];b.setAttribute('aria-pressed',prodState[k][t])};
-MOIS.forEach(m=>{const o=document.createElement('option');o.textContent=m;$('ech').append(o)});
+function renderProds(){$('prods').innerHTML=PRODUCTS.map(([k,label])=>{const s=prodState[k];
+ return `<div class="prow"><span class="pl">${label}</span><div class="ptog"><button type="button" class="yv" data-k="${k}" aria-pressed="${s.have===true}">Oui</button><button type="button" class="nv" data-k="${k}" aria-pressed="${s.have===false}">Non</button>${s.have===false?`<button type="button" class="wv" data-k="${k}" aria-pressed="${s.want===true}">Intéressé·e</button>`:''}</div></div>`}).join('')}
+$('prods').onclick=e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k;
+ if(b.classList.contains('yv')){prodState[k].have=true;prodState[k].want=false}
+ else if(b.classList.contains('nv')){prodState[k].have=false}
+ else if(b.classList.contains('wv')){prodState[k].want=!prodState[k].want}
+ renderProds()};
+document.querySelectorAll('#mb button').forEach(b=>b.onclick=()=>{membre=b.dataset.v==='1';document.querySelectorAll('#mb button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+ $('nonblock').hidden=membre!==false;$('prodblock').hidden=membre!==true;if(membre===true)renderProds();$('err').textContent=''});
+document.querySelectorAll('#ct button').forEach(b=>b.onclick=()=>{contact=b.dataset.v==='1';document.querySelectorAll('#ct button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('err').textContent=''});
 $('tel').oninput=e=>e.target.value=digits(e.target.value).replace(/(\d{2})(?=\d)/g,'$1 ');
 $('prenom').onblur=()=>$('prenom').value=cap($('prenom').value.trim());
 $('nom').onblur=()=>$('nom').value=$('nom').value.trim().toUpperCase();
@@ -244,6 +263,8 @@ $('f').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='IN
 
 function confetti(){const c=$('cf'),cols=['#c9a24b','#1f8a5b','#0f5c4a','#e8c876'];for(let i=0;i<26;i++){const s=document.createElement('i');
  s.style.left=Math.random()*100+'%';s.style.background=cols[i%cols.length];s.style.animationDuration=(1.4+Math.random()*.9)+'s';s.style.animationDelay=(Math.random()*.3)+'s';c.append(s)}}
+function e3(){if(membre===null)return 'Répondez si vous êtes mutualiste MAPHAR.';
+ if(membre===false&&contact===null)return 'Indiquez si vous souhaitez être contacté·e.';return ''}
 const learn=(t,label,s)=>db.collection('jonpci_suggestions').doc(t+'_'+kk(label)).set({t,label,s:s||''}).catch(()=>{});
 const rec=p=>({...p,jour:new Date().toISOString().slice(0,10),source:SRC,ts:firebase.firestore.FieldValue.serverTimestamp(),suivi:'À traiter',commercial:'',note:''});
 async function send(p){const d=rec(p),r=db.collection('jonpci_visites').doc(d.jour+'_'+d.tel).set(d);r.catch(()=>{});let dup=false;
@@ -253,11 +274,11 @@ async function send(p){const d=rec(p),r=db.collection('jonpci_visites').doc(d.jo
  $('okn').textContent=p.prenom;$('oks').textContent=dup?'Votre visite d\'aujourd\'hui était déjà enregistrée.':'Votre visite est enregistrée. À très bientôt sur le stand MAPHAR.';
  $('pn').textContent=p.prenom+' '+p.nom;$('pm').textContent=(p.prenom[0]||'')+(p.nom[0]||'');
  $('pj').textContent=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});confetti()}
-$('f').onsubmit=e=>{e.preventDefault();
+$('f').onsubmit=e=>{e.preventDefault();const er=e3();if(er){$('err').textContent=er;return}
  const raw=$('st').value.trim().replace(/^pharmacie\s+/i,''),pf=S[sect][1],lieu=canon($('lieu').value.trim());
  if(raw)learn('st',raw,sect);if(!LIEUX.includes(lieu))learn('lieu',lieu);
- const produit=Object.values(prodState).some(x=>x.have);
- send({prenom:cap($('prenom').value.trim()),nom:$('nom').value.trim().toUpperCase(),secteur:sect,structure:raw?(pf?pf+' ':'')+raw:'',lieu,tel:digits($('tel').value),email:$('mail').value.trim().toLowerCase(),produit,produits:{...prodState},echeance:$('ech').value})};
+ const produit=membre===true&&Object.values(prodState).some(x=>x.have===true);
+ send({prenom:cap($('prenom').value.trim()),nom:$('nom').value.trim().toUpperCase(),secteur:sect,structure:raw?(pf?pf+' ':'')+raw:'',lieu,tel:digits($('tel').value),email:$('mail').value.trim().toLowerCase(),produit,membre,contact:membre===false?contact:null,produits:membre===true?{...prodState}:null})};
 try{const p=JSON.parse(localStorage.getItem('jp26')||'null');if(p&&p.tel){$('f').hidden=true;document.querySelector('.steps').hidden=true;$('back').hidden=false;$('bn').textContent=p.prenom;
  $('bo').onclick=()=>send(p);$('bx').onclick=()=>{$('back').hidden=true;$('f').hidden=false;document.querySelector('.steps').hidden=false}}}catch(e){}
 </script></body></html>
