@@ -91,7 +91,7 @@ nav button[aria-selected=true]{background:linear-gradient(135deg,var(--brand2),v
  <div class="sticky">
  <div class="qd" id="qd"></div>
  <div class="fl"><select id="fj"></select><select id="fp"><option value="">Produit : tous</option><option value="1">Avec produit</option><option value="0">Sans produit</option></select><select id="fs"></select><select id="fl"></select><select id="fu"></select><input id="fq" type="search" placeholder="Rechercher un nom, une structure"></div>
- <div class="bar2"><span id="cnt" class="m"></span><button class="sec" id="exp">Exporter en CSV</button></div>
+ <div class="bar2"><span id="cnt" class="m"></span><button class="sec" id="exp">Exporter en Excel</button></div>
  </div>
  <div id="list"></div>
 </section>
@@ -101,6 +101,7 @@ nav button[aria-selected=true]{background:linear-gradient(135deg,var(--brand2),v
 </div>
 </main><div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
@@ -170,10 +171,27 @@ $('list').onclick=e=>{
  const row=e.target.closest('.crow');if(row){expandedId=expandedId===row.dataset.id?null:row.dataset.id;list()}};
 $('list').onchange=e=>{const t=e.target,id=t.closest('.ed')?.dataset.id;if(!id)return;const k=t.classList.contains('sv')?'suivi':t.classList.contains('cm')?'commercial':'note';
  db.collection('jonpci_visites').doc(id).update({[k]:t.value}).then(()=>toast('Enregistré')).catch(()=>toast('Modification refusée'))};
-$('exp').onclick=()=>{const c=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
- const h=['Jour','Heure','Prénom','Nom','Secteur','Structure','Lieu','Téléphone','E-mail','Mutualiste MAPHAR','Souhaite contact','Produit MAPHAR','Source','Suivi','Commercial','Note',...PLABEL.flatMap(([,l])=>[l+' (déjà)',l+' (intérêt)'])];
- const rows=filt().map(v=>[v.jour,hh(v),v.prenom,v.nom,v.secteur,v.structure,v.lieu,v.tel,v.email,v.membre===undefined?'':(v.membre?'Oui':'Non'),v.contact===null||v.contact===undefined?'':(v.contact?'Oui':'Non'),v.produit?'Oui':'Non',v.source,v.suivi,v.commercial,v.note,...PLABEL.flatMap(([k])=>[v.produits?.[k]?.have?'Oui':'',v.produits?.[k]?.want?'Oui':''])].map(c).join(';'));
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+[h.map(c).join(';'),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='visites-jonpci-2026.csv';a.click()};
+const EXP_H=['Jour','Heure','Prénom','Nom','Secteur','Structure','Lieu','Téléphone','E-mail','Mutualiste MAPHAR','Souhaite contact','Produit MAPHAR','Source','Suivi','Commercial','Note',...PLABEL.flatMap(([,l])=>[l+' (déjà)',l+' (intérêt)'])];
+function expRows(){return filt().map(v=>[v.jour,hh(v),v.prenom,v.nom,v.secteur,v.structure,v.lieu,v.tel,v.email,v.membre===undefined?'':(v.membre?'Oui':'Non'),v.contact===null||v.contact===undefined?'':(v.contact?'Oui':'Non'),v.produit?'Oui':'Non',v.source,v.suivi,v.commercial,v.note,...PLABEL.flatMap(([k])=>[v.produits?.[k]?.have?'Oui':'',v.produits?.[k]?.want?'Oui':''])])}
+function exportCSV(){const c=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+ const rows=expRows().map(r=>r.map(c).join(';'));
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+[EXP_H.map(c).join(';'),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='visites-jonpci-2026.csv';a.click()}
+function exportXLSX(){
+ const aoa=[EXP_H,...expRows()],ws=XLSX.utils.aoa_to_sheet(aoa);
+ const GREEN={rgb:'1F8A5B'},ORANGE={rgb:'C9701B'},BRAND={rgb:'0F5C4A'},WHITE={rgb:'FFFFFF'},LIGHT={rgb:'F3F1E9'};
+ const ncol=EXP_H.length,nrow=aoa.length;
+ for(let c=0;c<ncol;c++){const ref=XLSX.utils.encode_cell({r:0,c});if(ws[ref])ws[ref].s={font:{bold:true,color:WHITE,sz:11},fill:{fgColor:BRAND},alignment:{vertical:'center',horizontal:'center',wrapText:true},border:{bottom:{style:'thin',color:{rgb:'0A3D30'}}}}}
+ const colIdx={mut:EXP_H.indexOf('Mutualiste MAPHAR'),prod:EXP_H.indexOf('Produit MAPHAR')};
+ for(let r=1;r<nrow;r++){
+  if(r%2===0)for(let c=0;c<ncol;c++){const ref=XLSX.utils.encode_cell({r,c});if(ws[ref]&&!ws[ref].s)ws[ref].s={fill:{fgColor:LIGHT}}}
+  [colIdx.mut,colIdx.prod].forEach(ci=>{if(ci<0)return;const ref=XLSX.utils.encode_cell({r,c:ci}),cell=ws[ref];if(!cell)return;
+   const col=cell.v==='Oui'?GREEN:cell.v==='Non'?ORANGE:null;if(col)cell.s={font:{bold:true,color:WHITE},fill:{fgColor:col},alignment:{horizontal:'center'}}});
+  const telRef=XLSX.utils.encode_cell({r,c:EXP_H.indexOf('Téléphone')});if(ws[telRef])ws[telRef].t='s'}
+ ws['!cols']=EXP_H.map(h=>({wch:h==='Note'?26:h.includes('(')?12:Math.max(10,h.length+2)}));
+ ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:nrow-1,c:ncol-1}})};
+ ws['!freeze']={xSplit:0,ySplit:1};ws['!sheetViews']=[{pane:{ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'}}];
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Visites');XLSX.writeFile(wb,'visites-jonpci-2026.xlsx')}
+$('exp').onclick=()=>{try{if(typeof XLSX==='undefined')throw 0;exportXLSX()}catch(e){toast('Export Excel indisponible, export CSV à la place');exportCSV()}};
 
 function bars(o,cls){const m=Math.max(1,...Object.values(o).map(x=>typeof x==='number'?x:x.y+x.n));
  return Object.keys(o).map(k=>{const x=o[k];const t=typeof x==='number'?x:x.y+x.n;return `<div class="br"><span>${esc(k)}</span><div class="bar">${typeof x==='number'?`<i class="p" style="width:${x/m*100}%"></i>`:`<i class="y" style="width:${x.y/m*100}%"></i><i class="n" style="width:${x.n/m*100}%"></i>`}</div><span>${t}</span></div>`}).join('')||'<p class="m">Aucune donnée.</p>'}
@@ -219,22 +237,26 @@ function printQR(title,badge,badgeColor,src,caption){
  const w=window.open('','_blank');
  if(!w){toast('Autorisez les pop-up pour imprimer');return}
  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
- <style>body{font-family:'Figtree',system-ui,sans-serif;text-align:center;padding:48px 24px;margin:0}
- img.logo{width:56px;height:56px;border-radius:50%;margin-bottom:14px}
- h1{font-size:1.5rem;margin:0 0 4px;color:#0f5c4a}
- .badge{display:inline-block;background:${badgeColor};color:#fff;font-weight:800;font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;padding:5px 14px;border-radius:99px;margin-bottom:18px}
- p{color:#555;margin:6px 0;font-size:.95rem}
- img.qr{width:340px;height:340px;max-width:85vw;border:4px solid ${badgeColor};border-radius:16px;padding:14px;box-sizing:border-box}
- .foot{margin-top:26px;font-size:.8rem;color:#999;letter-spacing:.03em}
- @media print{body{padding:20px}}
+ <style>
+ @page{size:A5;margin:14mm}
+ *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ html,body{margin:0;height:100%}
+ body{font-family:'Figtree',system-ui,sans-serif;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:0 6mm;background:#fff}
+ img.logo{width:16mm;height:16mm;border-radius:50%;margin-bottom:5mm;box-shadow:0 0 0 1px #eee}
+ .badge{display:inline-block;background:${badgeColor};color:#fff;font-weight:800;font-size:3.4mm;letter-spacing:.05em;text-transform:uppercase;padding:2mm 6mm;border-radius:99px;margin-bottom:5mm}
+ h1{font-size:7mm;margin:0 0 3mm;color:#0f5c4a;font-weight:700}
+ p.cap{color:#555;margin:0 0 6mm;font-size:4mm;max-width:90mm}
+ img.qr{width:95mm;height:95mm;border:1.4mm solid ${badgeColor};border-radius:5mm;padding:5mm;background:#fff;display:block}
+ .foot{margin-top:7mm;font-size:3.2mm;color:#999;letter-spacing:.04em}
  </style></head><body>
  ${LOGO_URI?`<img class="logo" src="${LOGO_URI}">`:''}
- <div class="badge">${badge}</div><h1>${title}</h1><p>${caption}</p>
- <img class="qr" src="${src}">
+ <div class="badge">${badge}</div><h1>${title}</h1><p class="cap">${caption}</p>
+ <img class="qr" id="pqi" src="${src}">
  <div class="foot">MAPHAR · JONPCI 2026</div>
  </body></html>`);
  w.document.close();
- setTimeout(()=>{w.focus();w.print()},300)}
+ const go=()=>{w.focus();w.print()},img=w.document.getElementById('pqi');
+ if(img.complete&&img.naturalWidth>0)go();else{img.onload=go;img.onerror=go;setTimeout(go,2500)}}
 function qr(){const base=location.href.replace(/admin\.html.*$/,'index.html'),u=base+'?s=qr';
  const eqBase=location.href.replace(/admin\.html.*$/,'equipe.html');
  const srcV=`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(u)}&size=900x900&margin=30&color=15-92-74&bgcolor=255-255-255&ecc=H`;
