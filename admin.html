@@ -201,6 +201,8 @@ function bars(o,cls){const m=Math.max(1,...Object.values(o).map(x=>typeof x==='n
 function stats(){const tot=V.length,totVisites=V.reduce((s,v)=>s+(v.visites||1),0),y=V.filter(v=>v.produit).length,P=new Map();V.forEach(v=>P.set(v.tel,v));const py=[...P.values()].filter(v=>v.produit).length;
  const J={},H={},Sx={},Lx={},So={qr:0,lien:0};
  V.slice().sort((a,b)=>a.jour<b.jour?-1:1).forEach(v=>{(J[v.jour]??={y:0,n:0})[v.produit?'y':'n']++;const h=dt(v).getHours()+'h';H[h]=(H[h]||0)+1;Sx[v.secteur]=(Sx[v.secteur]||0)+1;Lx[v.lieu]=(Lx[v.lieu]||0)+1;So[v.source]=(So[v.source]||0)+1});
+ const byDay={};V.forEach(v=>{(byDay[v.jour]??={n:0,vi:0}).n++;byDay[v.jour].vi+=(v.visites||1)});
+ const dayList=Object.keys(byDay).sort();
  const top=Object.fromEntries(Object.entries(Lx).sort((a,b)=>b[1]-a[1]).slice(0,8)),days=Object.keys(J).length;
  const off=V.filter(v=>v.secteur==='Officine'),mut=off.filter(isMut).length,nonmut=off.filter(v=>!isMut(v)).length,autres=V.length-off.length;
  $('s').innerHTML=`<h2 style="margin-top:18px">Répartition présumée <span class="m" style="font-weight:400">· touchez une carte pour voir le détail</span></h2>
@@ -209,6 +211,10 @@ function stats(){const tot=V.length,totVisites=V.reduce((s,v)=>s+(v.visites||1),
  <div class="fig" id="pm" style="cursor:pointer"><div class="ic" style="background:var(--yes)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div><div><b style="color:var(--yes)">${mut}</b><span>présumés mutualistes (${pct(mut,tot)})</span></div></div>
  <div class="fig" id="pn" style="cursor:pointer"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${nonmut}</b><span>présumés non mutualistes (${pct(nonmut,tot)})</span></div></div>
  <div class="fig" id="pa" style="cursor:pointer"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div><b style="color:var(--gold)">${autres}</b><span>autres, hors Officine (${pct(autres,tot)})</span></div></div>
+ </div>
+ <h2>Détail par jour</h2>
+ <div style="padding:0 18px">${dayList.map(d=>`<div class="row" style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d)}</b><span class="m">${byDay[d].n} visiteur(s) · <b style="color:var(--ink)">${byDay[d].vi}</b> visite(s)</span></div>`).join('')||'<p class="m">Aucune donnée.</p>'}
+ <div class="row" style="display:flex;justify-content:space-between;align-items:center;border-left-color:var(--brand);background:var(--soft)"><b>Total</b><span class="m">${tot} visiteur(s) · <b style="color:var(--brand)">${totVisites}</b> visite(s)</span></div>
  </div>
  <h2>Visiteurs par jour</h2><p class="m" style="margin:0 18px 8px">Vert : avec produit. Orange : sans produit.</p><div style="padding:0 18px">${bars(J)}</div>
  <h2>Visiteurs par heure</h2><div style="padding:0 18px">${bars(H)}</div><h2>Par secteur</h2><div style="padding:0 18px">${bars(Sx)}</div><h2>Principaux lieux d'exercice</h2><div style="padding:0 18px">${bars(top)}</div>
