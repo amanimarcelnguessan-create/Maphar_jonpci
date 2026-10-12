@@ -126,7 +126,7 @@ input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(15,
 <section id="back" class="center" hidden>
  <div class="ring"><svg viewBox="0 0 80 80"><circle class="bg" cx="40" cy="40" r="34"/><circle class="fg" cx="40" cy="40" r="34"/></svg><div class="tick"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div></div>
  <h2>Content de vous revoir, <span class="okname" id="bn"></span></h2>
- <p class="fine" style="margin-top:2px">Confirmez votre visite d'aujourd'hui en un geste.</p>
+ <p class="fine" id="bh" style="margin-top:2px"></p>
  <div class="nav"><button class="btn primary" id="bo">Confirmer ma visite</button></div>
  <button class="btn ghost" id="bx" style="width:100%;margin-top:10px">Ce n'est pas moi</button>
 </section>
@@ -288,12 +288,23 @@ function confetti(){const c=$('cf'),cols=['#c9a24b','#1f8a5b','#0f5c4a','#e8c876
 function e3(){if(membre===null)return 'Répondez si vous êtes mutualiste MAPHAR.';
  if(membre===false&&contact===null)return 'Indiquez si vous souhaitez être contacté·e.';return ''}
 const learn=(t,label,s)=>db.collection('jonpci_suggestions').doc(t+'_'+kk(label)).set({t,label,s:s||''}).catch(()=>{});
-const rec=p=>({...p,jour:new Date().toISOString().slice(0,10),source:SRC,ts:firebase.firestore.FieldValue.serverTimestamp(),suivi:'À traiter',commercial:'',note:''});
-async function send(p){const d=rec(p),r=db.collection('jonpci_visites').doc(d.jour+'_'+d.tel).set(d);r.catch(()=>{});let dup=false;
+const today=()=>new Date().toISOString().slice(0,10);
+const dlabel=d=>new Date(d+'T12:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
+const rec=p=>({...p,jour:today(),source:SRC,ts:firebase.firestore.FieldValue.serverTimestamp(),visites:1,suivi:'À traiter',commercial:'',note:''});
+function savelocal(p,jour){try{localStorage.setItem('jp26',JSON.stringify({...p,_lastDay:jour}))}catch(e){}}
+async function send(p){const d=rec(p),ref=db.collection('jonpci_visites').doc(d.jour+'_'+d.tel),r=ref.set(d);r.catch(()=>{});let dup=false;
  try{await Promise.race([r,new Promise(x=>setTimeout(x,3500))])}catch(e){dup=e.code==='permission-denied'}
- try{localStorage.setItem('jp26',JSON.stringify(p))}catch(e){}
+ savelocal(p,d.jour);
  $('f').hidden=$('back').hidden=$('hero').hidden=true;document.querySelector('.steps').hidden=true;$('ok').hidden=false;
  $('okn').textContent=p.prenom;$('oks').textContent=dup?'Votre visite d\'aujourd\'hui était déjà enregistrée.':'Votre visite est enregistrée. À très bientôt sur le stand MAPHAR.';
+ $('pn').textContent=p.prenom+' '+p.nom;$('pm').textContent=(p.prenom[0]||'')+(p.nom[0]||'');
+ $('pj').textContent=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});confetti()}
+async function sendAgainToday(p){const t=today(),ref=db.collection('jonpci_visites').doc(t+'_'+p.tel);
+ const r=ref.update({visites:firebase.firestore.FieldValue.increment(1),ts:firebase.firestore.FieldValue.serverTimestamp(),nom:p.nom,prenom:p.prenom,produit:!!p.produit,membre:p.membre,contact:p.membre===false?p.contact:null,produits:p.membre===true?p.produits:null});
+ r.catch(()=>{});try{await Promise.race([r,new Promise(x=>setTimeout(x,3500))])}catch(e){}
+ savelocal(p,t);
+ $('back').hidden=$('hero').hidden=true;document.querySelector('.steps').hidden=true;$('ok').hidden=false;
+ $('okn').textContent=p.prenom;$('oks').textContent='Votre nouvelle visite d\'aujourd\'hui est enregistrée. Merci !';
  $('pn').textContent=p.prenom+' '+p.nom;$('pm').textContent=(p.prenom[0]||'')+(p.nom[0]||'');
  $('pj').textContent=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});confetti()}
 $('f').onsubmit=e=>{e.preventDefault();const er=e3();if(er){$('err').textContent=er;return}
@@ -302,5 +313,9 @@ $('f').onsubmit=e=>{e.preventDefault();const er=e3();if(er){$('err').textContent
  const produit=membre===true&&Object.values(prodState).some(x=>x.have===true);
  send({prenom:cap($('prenom').value.trim()),nom:$('nom').value.trim().toUpperCase(),secteur:sect,structure:raw?(pf?pf+' ':'')+raw:'',lieu,tel:digits($('tel').value),email:$('mail').value.trim().toLowerCase(),produit,membre,contact:membre===false?contact:null,produits:membre===true?{...prodState}:null})};
 try{const p=JSON.parse(localStorage.getItem('jp26')||'null');if(p&&p.tel){$('f').hidden=true;document.querySelector('.steps').hidden=true;$('back').hidden=false;$('bn').textContent=p.prenom;
- $('bo').onclick=()=>send(p);$('bx').onclick=()=>{$('back').hidden=true;$('f').hidden=false;document.querySelector('.steps').hidden=false}}}catch(e){}
+ const sameDay=p._lastDay===today();
+ $('bh').textContent=sameDay?'Confirmez votre visite d\'aujourd\'hui en un geste.':(p._lastDay?`Vous étiez passé le ${dlabel(p._lastDay)}. Enregistrez votre visite d'aujourd'hui.`:'Confirmez votre visite d\'aujourd\'hui en un geste.');
+ $('bo').textContent=sameDay?'Confirmer ma visite':'Enregistrer ma visite d\'aujourd\'hui';
+ $('bo').onclick=()=>sameDay?sendAgainToday(p):send(p);
+ $('bx').onclick=()=>{$('back').hidden=true;$('f').hidden=false;document.querySelector('.steps').hidden=false}}}catch(e){}
 </script></body></html>
