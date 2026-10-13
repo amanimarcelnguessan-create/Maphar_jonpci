@@ -205,19 +205,20 @@ function stats(){const tot=V.length,totVisites=V.reduce((s,v)=>s+(v.visites||1),
  const dayList=Object.keys(byDay).sort();
  const top=Object.fromEntries(Object.entries(Lx).sort((a,b)=>b[1]-a[1]).slice(0,8)),days=Object.keys(J).length;
  const off=V.filter(v=>v.secteur==='Officine'),mut=off.filter(isMut).length,nonmut=off.filter(v=>!isMut(v)).length,autres=V.length-off.length;
- $('s').innerHTML=`<h2 style="margin-top:18px">Répartition présumée <span class="m" style="font-weight:400">· touchez une carte pour voir le détail</span></h2>
+ const t=today(),tdy=byDay[t]||{n:0,vi:0},autresJours=dayList.filter(d=>d!==t);
+ $('s').innerHTML=`<div class="pulse" style="margin-top:14px"><div><b>${tdy.n}</b><small>visiteurs aujourd'hui</small></div><div style="text-align:center"><b style="font-size:1.3rem">${tdy.vi}</b><small>visites aujourd'hui</small></div><div style="text-align:right"><small style="opacity:.85">${esc(t)}</small></div></div>
+ <h2 style="margin-top:18px">Répartition présumée <span class="m" style="font-weight:400">· touchez une carte pour voir le détail</span></h2>
  <div class="grid">
  <div class="fig" id="pv" style="cursor:pointer"><div class="ic" style="background:var(--brand)"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><b>${tot}</b><span>visiteurs (${totVisites} visites)</span></div></div>
  <div class="fig" id="pm" style="cursor:pointer"><div class="ic" style="background:var(--yes)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div><div><b style="color:var(--yes)">${mut}</b><span>présumés mutualistes (${pct(mut,tot)})</span></div></div>
  <div class="fig" id="pn" style="cursor:pointer"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${nonmut}</b><span>présumés non mutualistes (${pct(nonmut,tot)})</span></div></div>
  <div class="fig" id="pa" style="cursor:pointer"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div><b style="color:var(--gold)">${autres}</b><span>autres, hors Officine (${pct(autres,tot)})</span></div></div>
  </div>
- <h2>Détail par jour</h2>
- <div style="padding:0 18px">${dayList.map(d=>`<div class="row" style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d)}</b><span class="m">${byDay[d].n} visiteur(s) · <b style="color:var(--ink)">${byDay[d].vi}</b> visite(s)</span></div>`).join('')||'<p class="m">Aucune donnée.</p>'}
- <div class="row" style="display:flex;justify-content:space-between;align-items:center;border-left-color:var(--brand);background:var(--soft)"><b>Total</b><span class="m">${tot} visiteur(s) · <b style="color:var(--brand)">${totVisites}</b> visite(s)</span></div>
- </div>
- <h2>Visiteurs par jour</h2><p class="m" style="margin:0 18px 8px">Vert : avec produit. Orange : sans produit.</p><div style="padding:0 18px">${bars(J)}</div>
- <h2>Visiteurs par heure</h2><div style="padding:0 18px">${bars(H)}</div><h2>Par secteur</h2><div style="padding:0 18px">${bars(Sx)}</div><h2>Principaux lieux d'exercice</h2><div style="padding:0 18px">${bars(top)}</div>
+ <details style="margin:18px 18px 0"><summary style="cursor:pointer;color:var(--brand);font-weight:700;font-size:.92rem">Voir le détail et le total sur toute la période</summary>
+ <div style="padding-top:10px">${autresJours.map(d=>`<div class="row" style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d)}</b><span class="m">${byDay[d].n} visiteur(s) · <b style="color:var(--ink)">${byDay[d].vi}</b> visite(s)</span></div>`).join('')||'<p class="m">Aucune autre journée pour l\'instant.</p>'}
+ <div class="row" style="display:flex;justify-content:space-between;align-items:center;border-left-color:var(--brand);background:var(--soft)"><b>Total période</b><span class="m">${tot} visiteur(s) · <b style="color:var(--brand)">${totVisites}</b> visite(s)</span></div>
+ </div></details>
+ <h2>Par secteur</h2><div style="padding:0 18px">${bars(Sx)}</div><h2>Principaux lieux d'exercice</h2><div style="padding:0 18px">${bars(top)}</div>
  <h2>Lecture statistique</h2><div class="card"><p><b>${tot}</b> visiteurs ont généré <b>${totVisites}</b> visites au total (un visiteur qui repasse le même jour compte plusieurs fois dans ce chiffre).</p><p>Taux de détention (pharmaciens distincts) : <b>${pct(py,P.size)}</b> (${py} avec, ${P.size-py} sans).</p><p>Moyenne par jour actif : <b>${days?(tot/days).toFixed(1).replace('.',','):'–'}</b> visiteurs. Revenus sur un autre jour : <b>${tot-P.size}</b>.</p><p>Origine : QR <b>${So.qr||0}</b>, lien <b>${So.lien||0}</b>. Le statut d'un pharmacien distinct est celui de sa dernière visite.</p></div>`
  $('pv').onclick=()=>openPresume('');$('pm').onclick=()=>openPresume('mut');$('pn').onclick=()=>openPresume('nonmut');$('pa').onclick=()=>openPresume('autres')}
 let T=[],unsubT;
