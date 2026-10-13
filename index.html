@@ -169,9 +169,14 @@ input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(15,
     <button type="button" class="y" data-v="1" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg>Oui</button>
     <button type="button" class="n" data-v="0" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>Non</button>
    </div>
+   <label>Souhaitez-vous adhérer à la MAPHAR ?</label>
+   <div class="yn" id="ad">
+    <button type="button" class="y" data-v="1" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg>Oui</button>
+    <button type="button" class="n" data-v="0" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>Non</button>
+   </div>
   </div>
   <div id="prodblock" hidden>
-   <label>Quels produits MAPHAR avez-vous ?</label>
+   <label id="prodlbl">Quels produits MAPHAR avez-vous ?</label>
    <div id="prods"></div>
   </div>
   <p class="err" id="err" role="alert"></p>
@@ -225,7 +230,7 @@ const PRODUCTS=[
  ['auto','Assurance automobile'],['multirisque_pro','Multirisque professionnelle'],['multirisque_hab','Multirisque habitation'],
  ['individuel_accident','Individuel accident'],['rc','Responsabilité civile'],
  {grp:'vie_grp',label:'Assurance Vie',items:[['vie_pharmavie','PHARMA VIE'],['vie_sunu','SUNU Assurance'],['vie_leadway','LEADWAY Vie']]},
- {grp:'secu_grp',label:'Sécurité',items:[['secu_911','911 Security'],['secu_flash','Flash Intervention']]},
+ {grp:'secu_grp',label:'Sécurité',items:[['secu_911','911 Security'],['secu_flash','Flash Intervention'],['secu_egib','EGIB Sécurité']]},
  {grp:'mob_grp',label:'Partenaires Mobilité',items:[['mob_sammotors','SAM MOTORS'],['mob_hrunited','HR & United Motors'],['mob_carburant','Carte carburant TOTALENERGIES']]}
 ];
 const ALL_KEYS=PRODUCTS.flatMap(e=>e.grp?e.items.map(i=>i[0]):[e[0]]);

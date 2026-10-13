@@ -151,13 +151,13 @@ function openPresume(mode){presumeMode=mode;shown=PAGE;$('fs').value='';$('fp').
 const OBJ=800;
 function pulse(){const t=today(),td=V.filter(v=>v.jour===t),n=td.length,nv=td.reduce((s,v)=>s+(v.visites||1),0),pc=Math.min(100,Math.round(n/OBJ*100));
  $('pulse').innerHTML=`<div><b>${n}</b><small>visiteurs aujourd'hui</small></div><div style="text-align:center"><b style="font-size:1.3rem">${nv}</b><small>visites (passages)</small></div><div class="pb"><i style="width:${pc}%"></i></div><div style="text-align:right"><b style="font-size:1rem">${pc}%</b><small>de l'objectif (${OBJ})</small></div>`
- const lbl={mut:'Présumés mutualistes',nonmut:'Présumés non mutualistes',autres:'Autres (hors Officine)'};
+ const lbl={mut:'Mutualistes',nonmut:'Non mutualistes',autres:'Autres (hors Officine)'};
  $('pch').innerHTML=presumeMode?`<div class="chips2"><span>${lbl[presumeMode]} <button id="pclr" style="border:0;background:none;color:var(--brand);font-weight:800;margin-left:6px">✕</button></span></div>`:'';
  if(presumeMode)$('pclr').onclick=()=>{presumeMode='';shown=PAGE;render()}}
 
 function render(){if(!$('v').hidden){pulse();list()}if(!$('s').hidden)stats();if(!$('e').hidden)team();if(!$('q').hidden)qr()}
 const ini=v=>((v.prenom||'?')[0]+(v.nom||'?')[0]).toUpperCase();
-const PLABEL=[['sante_mci','MCI CARE'],['sante_axa','AXA-CI (Yafolo)'],['auto','Auto'],['multirisque_pro','Multirisque pro'],['multirisque_hab','Multirisque habitation'],['individuel_accident','Individuel accident'],['rc','Resp. civile'],['vie_pharmavie','PHARMA VIE'],['vie_sunu','SUNU Assurance'],['vie_leadway','LEADWAY Vie'],['secu_911','911 Security'],['secu_flash','Flash Intervention'],['mob_sammotors','SAM MOTORS'],['mob_hrunited','HR & United Motors'],['mob_carburant','Carte carburant TOTALENERGIES']];
+const PLABEL=[['sante_mci','MCI CARE'],['sante_axa','AXA-CI (Yafolo)'],['auto','Auto'],['multirisque_pro','Multirisque pro'],['multirisque_hab','Multirisque habitation'],['individuel_accident','Individuel accident'],['rc','Resp. civile'],['vie_pharmavie','PHARMA VIE'],['vie_sunu','SUNU Assurance'],['vie_leadway','LEADWAY Vie'],['secu_911','911 Security'],['secu_flash','Flash Intervention'],['secu_egib','EGIB Sécurité'],['mob_sammotors','SAM MOTORS'],['mob_hrunited','HR & United Motors'],['mob_carburant','Carte carburant TOTALENERGIES']];
 function list(){const all=filt(),r=all.slice(0,shown);$('cnt').textContent=all.length+' visite(s) affichée(s) sur '+V.length;
  $('list').innerHTML=r.map(v=>{const open=v.id===expandedId;return `<div class="crow${open?' open':''}" style="border-left-color:var(${v.produit?'--yes':'--no'})" data-id="${v.id}"><div class="av">${ini(v)}</div><div class="nm"><b>${esc(v.prenom)} ${esc(v.nom)}</b><span>${esc(v.structure||v.secteur)} · ${esc(v.lieu)}</span></div><span class="dot ${v.produit?'y':'n'}"></span><span class="hh">${hh(v)}</span><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
  ${open?`<div class="exp" data-id="${v.id}">
@@ -172,15 +172,17 @@ $('list').onclick=e=>{
  const row=e.target.closest('.crow');if(row){expandedId=expandedId===row.dataset.id?null:row.dataset.id;list()}};
 $('list').onchange=e=>{const t=e.target,id=t.closest('.ed')?.dataset.id;if(!id)return;const k=t.classList.contains('sv')?'suivi':t.classList.contains('cm')?'commercial':'note';
  db.collection('jonpci_visites').doc(id).update({[k]:t.value}).then(()=>toast('Enregistré')).catch(()=>toast('Modification refusée'))};
-const EXP_H=['Dernière visite','Heure','Nombre de visites','Prénom','Nom','Secteur','Structure','Lieu','Téléphone','E-mail','Mutualiste MAPHAR','Souhaite contact','Produit MAPHAR','Source','Suivi','Commercial','Note',...PLABEL.flatMap(([,l])=>[l+' (déjà)',l+' (intérêt)'])];
-function expRows(){const byTel=new Map();
+const EXP_H=['Jour','Heure','Nombre de visites','Prénom','Nom','Secteur','Structure','Lieu','Téléphone','E-mail','Mutualiste MAPHAR','Souhaite contact','Produit MAPHAR','Source','Suivi','Commercial','Note',...PLABEL.flatMap(([,l])=>[l+' (déjà)',l+' (intérêt)'])];
+const rowOf=(v,n)=>[v.jour,hh(v),n,v.prenom,v.nom,v.secteur,v.structure,v.lieu,v.tel,v.email,v.membre===undefined?'':(v.membre?'Oui':'Non'),v.contact===null||v.contact===undefined?'':(v.contact?'Oui':'Non'),v.produit?'Oui':'Non',v.source,v.suivi,v.commercial,v.note,...PLABEL.flatMap(([k])=>[v.produits?.[k]?.have?'Oui':'',v.produits?.[k]?.want?'Oui':''])];
+function rowsForDay(day){return filt().filter(v=>v.jour===day).map(v=>rowOf(v,v.visites||1))}
+function rowsTotal(){const byTel=new Map();
  filt().slice().sort((a,b)=>a.jour<b.jour?-1:a.jour>b.jour?1:0).forEach(v=>{const prev=byTel.get(v.tel),n=(prev?prev._n:0)+(v.visites||1);byTel.set(v.tel,{...v,_n:n})});
- return[...byTel.values()].map(v=>[v.jour,hh(v),v._n,v.prenom,v.nom,v.secteur,v.structure,v.lieu,v.tel,v.email,v.membre===undefined?'':(v.membre?'Oui':'Non'),v.contact===null||v.contact===undefined?'':(v.contact?'Oui':'Non'),v.produit?'Oui':'Non',v.source,v.suivi,v.commercial,v.note,...PLABEL.flatMap(([k])=>[v.produits?.[k]?.have?'Oui':'',v.produits?.[k]?.want?'Oui':''])])}
+ return[...byTel.values()].map(v=>rowOf(v,v._n))}
 function exportCSV(){const c=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
- const rows=expRows().map(r=>r.map(c).join(';'));
+ const rows=rowsTotal().map(r=>r.map(c).join(';'));
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+[EXP_H.map(c).join(';'),...rows].join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='visites-jonpci-2026.csv';a.click()}
-function exportXLSX(){
- const aoa=[EXP_H,...expRows()],ws=XLSX.utils.aoa_to_sheet(aoa);
+function styledSheet(rows){
+ const aoa=[EXP_H,...rows],ws=XLSX.utils.aoa_to_sheet(aoa);
  const GREEN={rgb:'1F8A5B'},ORANGE={rgb:'C9701B'},BRAND={rgb:'0F5C4A'},WHITE={rgb:'FFFFFF'},LIGHT={rgb:'F3F1E9'};
  const ncol=EXP_H.length,nrow=aoa.length;
  for(let c=0;c<ncol;c++){const ref=XLSX.utils.encode_cell({r:0,c});if(ws[ref])ws[ref].s={font:{bold:true,color:WHITE,sz:11},fill:{fgColor:BRAND},alignment:{vertical:'center',horizontal:'center',wrapText:true},border:{bottom:{style:'thin',color:{rgb:'0A3D30'}}}}}
@@ -193,7 +195,14 @@ function exportXLSX(){
  ws['!cols']=EXP_H.map(h=>({wch:h==='Note'?26:h.includes('(')?12:Math.max(10,h.length+2)}));
  ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:nrow-1,c:ncol-1}})};
  ws['!freeze']={xSplit:0,ySplit:1};ws['!sheetViews']=[{pane:{ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'}}];
- const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Visites');XLSX.writeFile(wb,'visites-jonpci-2026.xlsx')}
+ return ws}
+function sheetName(s){return s.replace(/[:\\/?*\[\]]/g,'-').slice(0,31)}
+function exportXLSX(){
+ const days=[...new Set(filt().map(v=>v.jour))].sort();
+ const wb=XLSX.utils.book_new();
+ days.forEach((d,i)=>{XLSX.utils.book_append_sheet(wb,styledSheet(rowsForDay(d)),sheetName(`Jour ${i+1} - ${d}`))});
+ XLSX.utils.book_append_sheet(wb,styledSheet(rowsTotal()),'Total');
+ XLSX.writeFile(wb,'visites-jonpci-2026.xlsx')}
 $('exp').onclick=()=>{try{if(typeof XLSX==='undefined')throw 0;exportXLSX()}catch(e){toast('Export Excel indisponible, export CSV à la place');exportCSV()}};
 
 function bars(o,cls){const m=Math.max(1,...Object.values(o).map(x=>typeof x==='number'?x:x.y+x.n));
@@ -207,11 +216,11 @@ function stats(){const tot=V.length,totVisites=V.reduce((s,v)=>s+(v.visites||1),
  const off=V.filter(v=>v.secteur==='Officine'),mut=off.filter(isMut).length,nonmut=off.filter(v=>!isMut(v)).length,autres=V.length-off.length;
  const t=today(),tdy=byDay[t]||{n:0,vi:0},autresJours=dayList.filter(d=>d!==t);
  $('s').innerHTML=`<div class="pulse" style="margin-top:14px"><div><b>${tdy.n}</b><small>visiteurs aujourd'hui</small></div><div style="text-align:center"><b style="font-size:1.3rem">${tdy.vi}</b><small>visites aujourd'hui</small></div><div style="text-align:right"><small style="opacity:.85">${esc(t)}</small></div></div>
- <h2 style="margin-top:18px">Répartition présumée <span class="m" style="font-weight:400">· touchez une carte pour voir le détail</span></h2>
+ <h2 style="margin-top:18px">Répartition <span class="m" style="font-weight:400">· touchez une carte pour voir le détail</span></h2>
  <div class="grid">
  <div class="fig" id="pv" style="cursor:pointer"><div class="ic" style="background:var(--brand)"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><div><b>${tot}</b><span>visiteurs (${totVisites} visites)</span></div></div>
- <div class="fig" id="pm" style="cursor:pointer"><div class="ic" style="background:var(--yes)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div><div><b style="color:var(--yes)">${mut}</b><span>présumés mutualistes (${pct(mut,tot)})</span></div></div>
- <div class="fig" id="pn" style="cursor:pointer"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${nonmut}</b><span>présumés non mutualistes (${pct(nonmut,tot)})</span></div></div>
+ <div class="fig" id="pm" style="cursor:pointer"><div class="ic" style="background:var(--yes)"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-11"/></svg></div><div><b style="color:var(--yes)">${mut}</b><span>mutualistes (${pct(mut,tot)})</span></div></div>
+ <div class="fig" id="pn" style="cursor:pointer"><div class="ic" style="background:var(--no)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></div><div><b style="color:var(--no)">${nonmut}</b><span>non mutualistes (${pct(nonmut,tot)})</span></div></div>
  <div class="fig" id="pa" style="cursor:pointer"><div class="ic" style="background:var(--gold)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div><b style="color:var(--gold)">${autres}</b><span>autres, hors Officine (${pct(autres,tot)})</span></div></div>
  </div>
  <details style="margin:18px 18px 0"><summary style="cursor:pointer;color:var(--brand);font-weight:700;font-size:.92rem">Voir le détail et le total sur toute la période</summary>
@@ -227,10 +236,17 @@ function listenT(){unsubT&&unsubT();unsubT=db.collection('jonpci_equipe').onSnap
 function team(){const cur=$('en')?$('en').value:(localStorage.getItem('jp26_me')||''),t=today(),tj=T.filter(x=>x.jour===t),D={};
  T.forEach(x=>(D[x.jour]??=[]).push(x));
  const fc={};tj.forEach(x=>fc[x.fonction||'Autre']=(fc[x.fonction||'Autre']||0)+1);
+ const hourOf=x=>x.arrivee&&x.arrivee.toDate?x.arrivee.toDate().getHours():null;
+ const SLOTS=[['8h – 12h',8,12],['12h – 17h',12,17]];
+ const slotRow=x=>`<div class="row"><div class="top"><div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:50%;background:var(--yes);flex-shrink:0;box-shadow:0 0 0 3px rgba(31,138,91,.18)"></span><div><b>${esc(x.nom)}</b><div class="m">${esc(x.fonction||'')}${x.fonction?' · ':''}Arrivée ${tm(x.arrivee)}</div></div></div><button class="x xe" data-id="${x.id}">Supprimer</button></div></div>`;
+ const slotsHTML=SLOTS.map(([label,h1,h2])=>{const g=tj.filter(x=>{const h=hourOf(x);return h!==null&&h>=h1&&h<h2});
+  return `<h2 style="margin:18px 18px 8px;font-size:.95rem">${label} <span class="m" style="font-weight:400">(${g.length})</span></h2><div style="padding:0 18px">${g.map(slotRow).join('')||'<p class="m">Personne sur ce créneau.</p>'}</div>`}).join('');
+ const hors=tj.filter(x=>{const h=hourOf(x);return h===null||h<8||h>=17});
+ const horsHTML=hors.length?`<h2 style="margin:18px 18px 8px;font-size:.95rem">Hors créneau <span class="m" style="font-weight:400">(${hors.length})</span></h2><div style="padding:0 18px">${hors.map(slotRow).join('')}</div>`:'';
  $('e').innerHTML=`<div class="card"><h2 style="margin-top:0">Marquer ma présence (${t})</h2><div class="fl"><input id="en" placeholder="Prénom et nom" value="${esc(cur)}"><button class="go" id="ep">Je suis présent(e)</button></div></div>
  <h2>Présents aujourd'hui (${tj.length})</h2>
  <div class="chips2">${Object.entries(fc).map(([f,n])=>`<span>${esc(f)} · ${n}</span>`).join('')||''}</div>
- ${tj.map(x=>`<div class="row"><div class="top"><div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:50%;background:var(--yes);flex-shrink:0;box-shadow:0 0 0 3px rgba(31,138,91,.18)"></span><div><b>${esc(x.nom)}</b><div class="m">${esc(x.fonction||'')}${x.fonction?' · ':''}Arrivée ${tm(x.arrivee)}</div></div></div><button class="x xe" data-id="${x.id}">Supprimer</button></div></div>`).join('')||'<p class="m">Personne n\'a encore marqué sa présence.</p>'}
+ ${slotsHTML}${horsHTML}
  <h2>Présences par jour</h2>${Object.keys(D).sort().reverse().map(d=>{const p=D[d];return `<div class="row"><div class="top"><div><b>${esc(d)}</b><div class="m">${p.length?esc(p.map(x=>x.nom).join(', ')):'Aucune présence marquée'}</div></div><span class="b y">${p.length} présent(s)</span></div></div>`}).join('')||'<p class="m">Aucune donnée.</p>'}`}
 $('e').onclick=async e=>{const id=e.target.id,t=today();
  if(id==='ep'){const n=$('en').value.trim();if(!n)return toast('Indiquez votre nom');localStorage.setItem('jp26_me',n);
