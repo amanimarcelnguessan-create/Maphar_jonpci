@@ -236,7 +236,7 @@ const PRODUCTS=[
 const ALL_KEYS=PRODUCTS.flatMap(e=>e.grp?e.items.map(i=>i[0]):[e[0]]);
 const prodState={};ALL_KEYS.forEach(k=>prodState[k]={have:null,want:false});
 const openGroups={};
-let membre=null,contact=null;
+let membre=null,contact=null,adh=null;
 const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const cap=s=>s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
 const canon=l=>LIEUX.find(x=>norm(x)===norm(l))||cap(l);
@@ -253,23 +253,29 @@ Object.keys(S).forEach(k=>{const b=document.createElement('button');b.type='butt
  b.innerHTML=`<svg viewBox="0 0 24 24"><path d="${SICON[k]}"/></svg>${k}`;
  b.onclick=()=>{sect=k;$('stl').textContent=S[k][0]+(k==='Officine'?'':' (facultatif)');$('pf').textContent=S[k][1];$('pf').hidden=!S[k][1];
   document.querySelectorAll('#sect .chip').forEach(x=>x.setAttribute('aria-pressed',x===b))};$('sect').append(b)});
-function prowHTML(k,label,sub){const s=prodState[k];
+function prowHTML(k,label,sub,simple){const s=prodState[k];
+ if(simple)return `<div class="prow${sub?' sub':''}"><span class="pl">${label}</span><div class="ptog"><button type="button" class="wv" data-k="${k}" aria-pressed="${s.want===true}">Intéressé·e</button></div></div>`;
  return `<div class="prow${sub?' sub':''}"><span class="pl">${label}</span><div class="ptog"><button type="button" class="yv" data-k="${k}" aria-pressed="${s.have===true}">Oui</button><button type="button" class="nv" data-k="${k}" aria-pressed="${s.have===false}">Non</button>${s.have===false?`<button type="button" class="wv" data-k="${k}" aria-pressed="${s.want===true}">Intéressé·e</button>`:''}</div></div>`}
-function renderProds(){$('prods').innerHTML=PRODUCTS.map(e=>{
- if(!e.grp)return prowHTML(e[0],e[1],false);
- const n=e.items.filter(([k])=>prodState[k].have===true).length,open=!!openGroups[e.grp];
+function renderProds(simple){$('prods').innerHTML=PRODUCTS.map(e=>{
+ if(!e.grp)return prowHTML(e[0],e[1],false,simple);
+ const n=(simple?e.items.filter(([k])=>prodState[k].want===true):e.items.filter(([k])=>prodState[k].have===true)).length,open=!!openGroups[e.grp];
  return `<div class="pgrp" data-g="${e.grp}"><span class="pl">${e.label}</span>${n?`<span class="pct">${n}/${e.items.length} ✓</span>`:''}<svg class="chev${open?' open':''}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
- ${open?e.items.map(([k,l])=>prowHTML(k,l,true)).join(''):''}`}).join('')}
-$('prods').onclick=e=>{const b=e.target.closest('button');
+ ${open?e.items.map(([k,l])=>prowHTML(k,l,true,simple)).join(''):''}`}).join('')}
+$('prods').onclick=e=>{const b=e.target.closest('button'),simple=membre===false;
  if(b){const k=b.dataset.k;
   if(b.classList.contains('yv')){prodState[k].have=true;prodState[k].want=false}
   else if(b.classList.contains('nv')){prodState[k].have=false}
   else if(b.classList.contains('wv')){prodState[k].want=!prodState[k].want}
-  return renderProds()}
- const g=e.target.closest('.pgrp');if(g){openGroups[g.dataset.g]=!openGroups[g.dataset.g];renderProds()}};
+  return renderProds(simple)}
+ const g=e.target.closest('.pgrp');if(g){openGroups[g.dataset.g]=!openGroups[g.dataset.g];renderProds(simple)}};
 document.querySelectorAll('#mb button').forEach(b=>b.onclick=()=>{membre=b.dataset.v==='1';document.querySelectorAll('#mb button').forEach(x=>x.setAttribute('aria-pressed',x===b));
- $('nonblock').hidden=membre!==false;$('prodblock').hidden=membre!==true;if(membre===true)renderProds();$('err').textContent=''});
+ $('nonblock').hidden=membre!==false;$('prodblock').hidden=true;
+ if(membre===true){$('prodlbl').textContent='Quels produits MAPHAR avez-vous ?';$('prodblock').hidden=false;renderProds(false)}
+ else{adh=null;document.querySelectorAll('#ad button').forEach(x=>x.setAttribute('aria-pressed',false))}
+ $('err').textContent=''});
 document.querySelectorAll('#ct button').forEach(b=>b.onclick=()=>{contact=b.dataset.v==='1';document.querySelectorAll('#ct button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('err').textContent=''});
+document.querySelectorAll('#ad button').forEach(b=>b.onclick=()=>{adh=b.dataset.v==='1';document.querySelectorAll('#ad button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+ $('prodlbl').textContent='Quels produits souhaitez-vous ?';$('prodblock').hidden=adh!==true;if(adh===true)renderProds(true);$('err').textContent=''});
 $('tel').oninput=e=>e.target.value=digits(e.target.value).replace(/(\d{2})(?=\d)/g,'$1 ');
 $('prenom').onblur=()=>$('prenom').value=cap($('prenom').value.trim());
 $('nom').onblur=()=>$('nom').value=$('nom').value.trim().toUpperCase();
@@ -291,7 +297,8 @@ $('f').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='IN
 function confetti(){const c=$('cf'),cols=['#c9a24b','#1f8a5b','#0f5c4a','#e8c876'];for(let i=0;i<26;i++){const s=document.createElement('i');
  s.style.left=Math.random()*100+'%';s.style.background=cols[i%cols.length];s.style.animationDuration=(1.4+Math.random()*.9)+'s';s.style.animationDelay=(Math.random()*.3)+'s';c.append(s)}}
 function e3(){if(membre===null)return 'Répondez si vous êtes mutualiste MAPHAR.';
- if(membre===false&&contact===null)return 'Indiquez si vous souhaitez être contacté·e.';return ''}
+ if(membre===false&&contact===null)return 'Indiquez si vous souhaitez être contacté·e.';
+ if(membre===false&&adh===null)return 'Indiquez si vous souhaitez adhérer à la MAPHAR.';return ''}
 const learn=(t,label,s)=>db.collection('jonpci_suggestions').doc(t+'_'+kk(label)).set({t,label,s:s||''}).catch(()=>{});
 const today=()=>new Date().toISOString().slice(0,10);
 const dlabel=d=>new Date(d+'T12:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long'});
@@ -305,7 +312,8 @@ async function send(p){const d=rec(p),ref=db.collection('jonpci_visites').doc(d.
  $('pn').textContent=p.prenom+' '+p.nom;$('pm').textContent=(p.prenom[0]||'')+(p.nom[0]||'');
  $('pj').textContent=new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});confetti()}
 async function sendAgainToday(p){const t=today(),ref=db.collection('jonpci_visites').doc(t+'_'+p.tel);
- const r=ref.update({visites:firebase.firestore.FieldValue.increment(1),ts:firebase.firestore.FieldValue.serverTimestamp(),nom:p.nom,prenom:p.prenom,produit:!!p.produit,membre:p.membre,contact:p.membre===false?p.contact:null,produits:p.membre===true?p.produits:null});
+ const d={prenom:p.prenom,nom:p.nom,secteur:p.secteur,structure:p.structure,lieu:p.lieu,tel:p.tel,email:p.email,jour:t,source:SRC,ts:firebase.firestore.FieldValue.serverTimestamp(),produit:!!p.produit,membre:p.membre,contact:p.membre===false?p.contact:null,adhesion:p.membre===false?p.adhesion:null,produits:(p.membre===true||p.adhesion===true)?p.produits:null,visites:firebase.firestore.FieldValue.increment(1)};
+ const r=ref.set(d,{merge:true});
  r.catch(()=>{});try{await Promise.race([r,new Promise(x=>setTimeout(x,3500))])}catch(e){}
  savelocal(p,t);
  $('back').hidden=$('hero').hidden=true;document.querySelector('.steps').hidden=true;$('ok').hidden=false;
@@ -316,7 +324,7 @@ $('f').onsubmit=e=>{e.preventDefault();const er=e3();if(er){$('err').textContent
  const raw=$('st').value.trim().replace(/^pharmacie\s+/i,''),pf=S[sect][1],lieu=canon($('lieu').value.trim());
  if(raw)learn('st',raw,sect);if(!LIEUX.includes(lieu))learn('lieu',lieu);
  const produit=membre===true&&Object.values(prodState).some(x=>x.have===true);
- send({prenom:cap($('prenom').value.trim()),nom:$('nom').value.trim().toUpperCase(),secteur:sect,structure:raw?(pf?pf+' ':'')+raw:'',lieu,tel:digits($('tel').value),email:$('mail').value.trim().toLowerCase(),produit,membre,contact:membre===false?contact:null,produits:membre===true?{...prodState}:null})};
+ send({prenom:cap($('prenom').value.trim()),nom:$('nom').value.trim().toUpperCase(),secteur:sect,structure:raw?(pf?pf+' ':'')+raw:'',lieu,tel:digits($('tel').value),email:$('mail').value.trim().toLowerCase(),produit,membre,contact:membre===false?contact:null,adhesion:membre===false?adh:null,produits:(membre===true||adh===true)?{...prodState}:null})};
 try{const p=JSON.parse(localStorage.getItem('jp26')||'null');if(p&&p.tel){$('f').hidden=true;document.querySelector('.steps').hidden=true;$('back').hidden=false;$('bn').textContent=p.prenom;
  const sameDay=p._lastDay===today();
  $('bh').textContent=sameDay?'Confirmez votre visite d\'aujourd\'hui en un geste.':(p._lastDay?`Vous étiez passé le ${dlabel(p._lastDay)}. Enregistrez votre visite d'aujourd'hui.`:'Confirmez votre visite d\'aujourd\'hui en un geste.');

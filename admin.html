@@ -145,7 +145,7 @@ function presumeOk(v){if(!presumeMode)return true;
  if(presumeMode==='nonmut')return v.secteur==='Officine'&&!isMut(v);
  if(presumeMode==='autres')return v.secteur!=='Officine';return true}
 function filt(){const q=$('fq').value.toLowerCase().trim();
- return V.filter(v=>(!$('fj').value||v.jour===$('fj').value)&&(!$('fp').value||String(v.produit?1:0)===$('fp').value)&&(!$('fs').value||v.secteur===$('fs').value)&&(!$('fl').value||v.lieu===$('fl').value)&&(!$('fu').value||v.suivi===$('fu').value)&&presumeOk(v)&&(!q||(v.prenom+' '+v.nom+' '+v.structure+' '+v.lieu).toLowerCase().includes(q)))}
+ return V.filter(v=>(!$('fj').value||v.jour===$('fj').value)&&(!$('fp').value||String(v.produit?1:0)===$('fp').value)&&(!$('fs').value||v.secteur===$('fs').value)&&(!$('fl').value||v.lieu===$('fl').value)&&(!$('fu').value||(v.suivi||'À traiter')===$('fu').value)&&presumeOk(v)&&(!q||(v.prenom+' '+v.nom+' '+v.structure+' '+v.lieu).toLowerCase().includes(q)))}
 function goTab(t){const b=[...document.querySelectorAll('nav button')].find(x=>x.dataset.t===t);b&&b.click()}
 function openPresume(mode){presumeMode=mode;shown=PAGE;$('fs').value='';$('fp').value='';goTab('v');render()}
 const OBJ=800;
@@ -161,7 +161,7 @@ const PLABEL=[['sante_mci','MCI CARE'],['sante_axa','AXA-CI (Yafolo)'],['auto','
 function list(){const all=filt(),r=all.slice(0,shown);$('cnt').textContent=all.length+' visite(s) affichée(s) sur '+V.length;
  $('list').innerHTML=r.map(v=>{const open=v.id===expandedId;return `<div class="crow${open?' open':''}" style="border-left-color:var(${v.produit?'--yes':'--no'})" data-id="${v.id}"><div class="av">${ini(v)}</div><div class="nm"><b>${esc(v.prenom)} ${esc(v.nom)}</b><span>${esc(v.structure||v.secteur)} · ${esc(v.lieu)}</span></div><span class="dot ${v.produit?'y':'n'}"></span><span class="hh">${hh(v)}</span><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
  ${open?`<div class="exp" data-id="${v.id}">
-  <p class="m" style="margin:0 0 8px"><a href="tel:+225${esc(v.tel)}">${ftel(v.tel)}</a>${v.email?', <a href="mailto:'+esc(v.email)+'">'+esc(v.email)+'</a>':''} · ${esc(v.jour)} · ${esc(v.secteur)}${v.membre!==undefined?` · Mutualiste MAPHAR : ${v.membre?'Oui':'Non'}`:''}${v.membre===false&&v.contact!==null?`, souhaite être contacté·e : ${v.contact?'Oui':'Non'}`:''}</p>
+  <p class="m" style="margin:0 0 8px"><a href="tel:+225${esc(v.tel)}">${ftel(v.tel)}</a>${v.email?', <a href="mailto:'+esc(v.email)+'">'+esc(v.email)+'</a>':''} · ${esc(v.jour)} · ${esc(v.secteur)}${v.membre!==undefined?` · Mutualiste MAPHAR : ${v.membre?'Oui':'Non'}`:''}${v.membre===false&&v.contact!==null?`, souhaite être contacté·e : ${v.contact?'Oui':'Non'}`:''}${v.membre===false&&v.adhesion!=null?`, souhaite adhérer : ${v.adhesion?'Oui':'Non'}`:''}</p>
   ${v.produits?`<div class="chips2">${PLABEL.filter(([k])=>v.produits[k]?.have||v.produits[k]?.want).map(([k,l])=>`<span>${esc(l)} ${v.produits[k].have?'· en dispose':''}${v.produits[k].want?'· intéressé·e':''}</span>`).join('')||'<span>Aucun produit coché</span>'}</div>`:''}
   <div class="ed" data-id="${v.id}"><select class="sv">${SU.map(x=>`<option${x===v.suivi?' selected':''}>${x}</option>`).join('')}</select><input class="cm" placeholder="Commercial" value="${esc(v.commercial)}"><input class="nt" placeholder="Note" value="${esc(v.note)}"><button class="x">Supprimer</button></div></div>`:''}`}).join('')
  +(all.length>shown?`<button class="loadmore" id="more">Charger plus (${all.length-shown} restantes)</button>`:'')
